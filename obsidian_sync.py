@@ -437,10 +437,11 @@ def compute_speech_aggregate(content_hash):
     conn = sqlite3.connect(str(DB_PATH), timeout=10)
     conn.row_factory = sqlite3.Row
     try:
+        # Vault — для SPY-карточек. Translator-items не должны попадать в агрегаты.
         rows = conn.execute(
             "SELECT items.*, buyers.name as buyer_name FROM items "
             "LEFT JOIN buyers ON items.buyer_id = buyers.id "
-            "WHERE content_hash=?",
+            "WHERE content_hash=? AND bot_source='spy'",
             (content_hash,)
         ).fetchall()
         if not rows:
@@ -491,10 +492,11 @@ def bootstrap_all(db_path):
 
         conn = sqlite3.connect(str(db_path), timeout=10)
         conn.row_factory = sqlite3.Row
+        # Bootstrap только SPY-карточек, translator не идёт в vault
         rows = conn.execute(
             "SELECT items.*, buyers.name as buyer_name FROM items "
             "LEFT JOIN buyers ON items.buyer_id = buyers.id "
-            "WHERE translation IS NOT NULL ORDER BY created_at"
+            "WHERE translation IS NOT NULL AND bot_source='spy' ORDER BY created_at"
         ).fetchall()
 
         total = len(rows)

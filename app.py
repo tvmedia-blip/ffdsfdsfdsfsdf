@@ -11,7 +11,7 @@ Telegram-бот: Видео-переводчик + Facebook-скачивател
     apt install ffmpeg
 """
 
-import os, re, asyncio, logging, tempfile, subprocess, time, uuid, sqlite3, hashlib
+import os, re, asyncio, logging, tempfile, subprocess, time, uuid, sqlite3, hashlib, threading
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse, parse_qs
@@ -56,7 +56,7 @@ from deep_translator import GoogleTranslator
 # =====================================================
 
 TELEGRAM_BOT_TOKEN = "REDACTED_SPY_BOT_TOKEN"
-TRANSLATOR_BOT_TOKEN = "REDACTED_TRANSLATOR_BOT_TOKEN"  # Translator-only: не сохраняет в БД
+TRANSLATOR_BOT_TOKEN = "REDACTED_TRANSLATOR_BOT_TOKEN"  # Translator-only: не сохраняет в БД  # Translator-only: не сохраняет в БД
 
 def is_translator_bot(update):
     """True если сообщение пришло во второй (translator-only) бот."""
@@ -113,17 +113,36 @@ def init_db():
                 pix TEXT
             )
         """)
-        for col, coltype in [("video_filename", "TEXT"), ("thumb_filename", "TEXT"), ("geo", "TEXT"), ("tracking_url", "TEXT"), ("content_hash", "TEXT"), ("uid", "TEXT")]:
+        for col, coltype in [
+            ("video_filename", "TEXT"),
+            ("thumb_filename", "TEXT"),
+            ("geo", "TEXT"),
+            ("tracking_url", "TEXT"),
+            ("content_hash", "TEXT"),
+            ("uid", "TEXT"),
+            ("buyer_id", "INTEGER"),
+            ("offer_name", "TEXT"),
+            ("offer_crawled_at", "TEXT"),
+            ("bot_source", "TEXT DEFAULT 'spy'"),
+        ]:
             try:
                 conn.execute("ALTER TABLE items ADD COLUMN %s %s" % (col, coltype))
             except sqlite3.OperationalError:
                 pass
+        # Backfill: any pre-migration row gets bot_source='spy'
+        conn.execute("UPDATE items SET bot_source='spy' WHERE bot_source IS NULL")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_items_created ON items(created_at DESC)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_items_domain ON items(tracking_domain)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_items_hash ON items(content_hash)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_items_bot_source ON items(bot_source)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_items_offer ON items(offer_name)")
         conn.commit()
-        # Rehash content_hash (новый алгоритм: MD5 с нормализацией пунктуации)
-        rows = conn.execute("SELECT id, translation FROM items WHERE translation IS NOT NULL").fetchall()
+        # Rehash content_hash — только для строк где hash отсутствует или некорректной длины.
+        # MD5 hex даёт ровно 32 символа; всё остальное — индикатор старого/битого хэша.
+        rows = conn.execute(
+            "SELECT id, translation FROM items "
+            "WHERE translation IS NOT NULL AND (content_hash IS NULL OR LENGTH(content_hash) != 32)"
+        ).fetchall()
         rehashed = 0
         for row_id, text in rows:
             h = compute_content_hash(text)
@@ -338,41 +357,46 @@ def init_lifespan_engine():
 init_lifespan_engine()
 
 
-def add_to_similar_index(item_id, content_hash=None, tracking_domain=None, sub4=None, sub5=None, pix=None, bot_source='spy'):
-    """Добавляет новый item в similar + unique + lifespan index. Source-aware."""
-    global _similar_engine
-    if _similar_engine:
-        _similar_engine.add_card(CardData(
-            id=str(item_id),
-            content_hash=content_hash,
-            tracking_domain=tracking_domain,
-            sub4=sub4,
-            sub5=sub5,
-            pixel=pix,
-            source=bot_source,
-        ))
-    global _unique_index
-    if _unique_index:
-        _unique_index.add_item({
-            'id': str(item_id),
-            'content_hash': content_hash or '',
-            'source': bot_source,
-        })
-    global _lifespan_engine
-    if _lifespan_engine:
-        from datetime import datetime
-        _lifespan_engine.add_item({
-            'id': str(item_id),
-            'content_hash': content_hash or '',
-            'date': datetime.now().strftime('%Y-%m-%d'),
-            'tracking_domain': tracking_domain or '',
-            'sub4': sub4 or '',
-            'sub5': sub5 or '',
-            'pix': pix or '',
-            'source': bot_source,
-        })
+# Lock для защиты shared engine state от race condition между worker-thread (save_item)
+# и event-loop thread (web API). Используется в add_to_similar_index + при чтениях из API.
+_engines_lock = threading.RLock()
 
-    # Sync to Obsidian vault (async, non-blocking)
+
+def add_to_similar_index(item_id, content_hash=None, tracking_domain=None, sub4=None, sub5=None, pix=None, bot_source='spy'):
+    """Добавляет новый item в similar + unique + lifespan index. Source-aware. Thread-safe."""
+    global _similar_engine, _unique_index, _lifespan_engine
+    with _engines_lock:
+        if _similar_engine:
+            _similar_engine.add_card(CardData(
+                id=str(item_id),
+                content_hash=content_hash,
+                tracking_domain=tracking_domain,
+                sub4=sub4,
+                sub5=sub5,
+                pixel=pix,
+                source=bot_source,
+            ))
+        if _unique_index:
+            _unique_index.add_item({
+                'id': str(item_id),
+                'content_hash': content_hash or '',
+                'source': bot_source,
+            })
+        if _lifespan_engine:
+            from datetime import datetime
+            _lifespan_engine.add_item({
+                'id': str(item_id),
+                'content_hash': content_hash or '',
+                'date': datetime.now().strftime('%Y-%m-%d'),
+                'tracking_domain': tracking_domain or '',
+                'sub4': sub4 or '',
+                'sub5': sub5 or '',
+                'pix': pix or '',
+                'source': bot_source,
+            })
+
+    # Sync to Obsidian vault (async, non-blocking) — try/finally чтобы не лить connections
+    conn_sync = None
     try:
         conn_sync = _db_connect()
         conn_sync.row_factory = sqlite3.Row
@@ -381,11 +405,16 @@ def add_to_similar_index(item_id, content_hash=None, tracking_domain=None, sub4=
             "LEFT JOIN buyers ON items.buyer_id = buyers.id WHERE items.id=?",
             (item_id,)
         ).fetchone()
-        conn_sync.close()
         if item_row:
             obsidian_sync.sync_item(dict(item_row))
     except Exception as e:
         log.warning("[OBSIDIAN] sync failed for item %d: %s", item_id, e)
+    finally:
+        if conn_sync is not None:
+            try:
+                conn_sync.close()
+            except Exception:
+                pass
 
 
 def assign_buyer_to_item(sub4, tracking_domain=None, pix=None):
@@ -1485,6 +1514,25 @@ def _source_where_clause(auth):
     return f"bot_source IN ({placeholders})", list(sources)
 
 
+def _assert_item_visible(item_id, auth):
+    """Проверяет что item с данным id виден текущему юзеру по его allowed_sources.
+    Возвращает True/False. Используется во всех per-id endpoints для
+    предотвращения cross-source enumeration.
+    """
+    if not auth or not auth.get('ok'):
+        return False
+    try:
+        iid = int(item_id)
+    except (ValueError, TypeError):
+        return False
+    src_clause, src_params = _source_where_clause(auth)
+    row = _db_query(
+        "SELECT 1 FROM items WHERE id=? AND " + src_clause + " LIMIT 1",
+        [iid] + src_params,
+    )
+    return bool(row)
+
+
 async def api_items(request):
     auth = _check_auth(request)
     if not auth['ok']:
@@ -1572,14 +1620,22 @@ async def api_items(request):
     if unique in ("1", "normal", "strict"):
         mode = "strict" if unique == "strict" else "normal"
         if _unique_index:
-            uids = _unique_index.get_unique_ids(mode, allowed_sources=(auth['allowed_sources'] if auth['requested_source'] == 'both' else [auth['requested_source']]))
+            with _engines_lock:
+                uids = _unique_index.get_unique_ids(mode, allowed_sources=(auth['allowed_sources'] if auth['requested_source'] == 'both' else [auth['requested_source']]))
             if uids:
                 # Use content_hash based SQL for efficiency
                 if mode == "strict":
                     where_clauses.append(f"content_hash IN (SELECT content_hash FROM items WHERE {src_clause} AND content_hash IS NOT NULL GROUP BY content_hash HAVING COUNT(*)=1)")
                     params.extend(src_params)
                 else:
-                    where_clauses.append(f"items.id IN (SELECT MIN(id) FROM items WHERE {src_clause} AND content_hash IS NOT NULL GROUP BY content_hash)")
+                    # Earliest item per content_hash group (by date, not id — id ≠ date order
+                    # after import_chatexport which inserts historical rows with newer ids).
+                    where_clauses.append(
+                        f"items.id IN (SELECT id FROM items i1 WHERE {src_clause} AND content_hash IS NOT NULL "
+                        f"AND created_at = (SELECT MIN(created_at) FROM items i2 WHERE i2.content_hash = i1.content_hash AND i2.{src_clause}))"
+                    )
+                    # The src_clause appears twice in the subquery
+                    params.extend(src_params)
                     params.extend(src_params)
 
     where_sql = (" WHERE " + " AND ".join(where_clauses)) if where_clauses else ""
@@ -1717,8 +1773,12 @@ async def api_lifespan(request):
         item_id = request.match_info["id"]
     except KeyError:
         return web.json_response({}, status=400)
+    # Source-isolation: убеждаемся что item виден этому юзеру
+    if not await asyncio.to_thread(_assert_item_visible, item_id, auth):
+        return web.json_response({}, status=404)
     if _lifespan_engine:
-        info = _lifespan_engine.get_lifespan(item_id)
+        with _engines_lock:
+            info = _lifespan_engine.get_lifespan(item_id)
         if info:
             return web.json_response(info)
     return web.json_response({})
@@ -1735,7 +1795,24 @@ async def api_lifespan_top(request):
         limit = 20
     geo = request.query.get("geo", "").strip() or None
     if _lifespan_engine:
-        top = _lifespan_engine.get_top_runners(limit=limit, geo=geo, min_days=1)
+        with _engines_lock:
+            top = _lifespan_engine.get_top_runners(limit=limit, geo=geo, min_days=1)
+        # Source-filter: оставляем только items видимые юзеру
+        # NB: get_top_runners возвращает агрегаты; фильтруем сюда же по item_ids
+        if top:
+            ids_in_top = []
+            for entry in top:
+                ids_in_top.extend(entry.get('item_ids', [])[:5])
+            if ids_in_top:
+                src_clause, src_params = _source_where_clause(auth)
+                placeholders = ",".join("?" * len(ids_in_top))
+                visible_rows = await asyncio.to_thread(
+                    _db_query,
+                    f"SELECT id FROM items WHERE id IN ({placeholders}) AND " + src_clause,
+                    [int(i) for i in ids_in_top] + src_params,
+                )
+                visible = {str(r['id']) for r in visible_rows}
+                top = [t for t in top if any(str(i) in visible for i in t.get('item_ids', [])[:5])]
         return web.json_response(top)
     return web.json_response([])
 
@@ -1749,10 +1826,26 @@ async def api_lifespan_badges(request):
     if not ids_str:
         return web.json_response({})
     ids = [i.strip() for i in ids_str.split(",") if i.strip()]
+    # Source-isolation: фильтруем ids по тем что видны юзеру
+    if ids:
+        try:
+            int_ids = [int(i) for i in ids[:100]]
+            src_clause, src_params = _source_where_clause(auth)
+            placeholders = ",".join("?" * len(int_ids))
+            visible_rows = await asyncio.to_thread(
+                _db_query,
+                f"SELECT id FROM items WHERE id IN ({placeholders}) AND " + src_clause,
+                int_ids + src_params,
+            )
+            visible = {str(r['id']) for r in visible_rows}
+            ids = [i for i in ids if i in visible]
+        except (ValueError, TypeError):
+            return web.json_response({})
     result = {}
     if _lifespan_engine:
-        for iid in ids[:100]:
-            result[iid] = _lifespan_engine.get_badge(iid)
+        with _engines_lock:
+            for iid in ids[:100]:
+                result[iid] = _lifespan_engine.get_badge(iid)
     return web.json_response(result)
 
 
@@ -1783,6 +1876,9 @@ async def api_favorite_toggle(request):
     item_id = data.get("item_id")
     if not item_id:
         return web.json_response({"error": "item_id required"}, status=400)
+    # Source-isolation: убеждаемся что item виден юзеру (защита от enumeration)
+    if not await asyncio.to_thread(_assert_item_visible, item_id, auth):
+        return web.json_response({"error": "not found"}, status=404)
     conn = _db_connect()
     try:
         existing = conn.execute("SELECT id FROM favorites WHERE item_id=?", (item_id,)).fetchone()
@@ -1901,6 +1997,9 @@ async def api_similar(request):
         item_id = int(request.match_info["id"])
     except (ValueError, TypeError):
         return web.json_response([], status=400)
+    # Source-isolation: queried item must be visible to user
+    if not await asyncio.to_thread(_assert_item_visible, item_id, auth):
+        return web.json_response([], status=404)
     # no hard cap — user wants full similar list
     try:
         limit = int(request.query.get("limit", 0))
@@ -1915,7 +2014,8 @@ async def api_similar(request):
     effective_limit = limit if limit > 0 else 10_000
     # Source-aware: spy-юзер видит только spy кандидатов, ssteam2 — оба
     allowed = auth['allowed_sources'] if auth['requested_source'] == 'both' else [auth['requested_source']]
-    results = _similar_engine.find_similar(str(item_id), limit=effective_limit, allowed_sources=allowed)
+    with _engines_lock:
+        results = _similar_engine.find_similar(str(item_id), limit=effective_limit, allowed_sources=allowed)
 
     # Enrich with DB data (thumbnail, translation preview, etc.)
     if results:
@@ -1961,9 +2061,37 @@ async def serve_index(request):
     return web.Response(text="Frontend not found", status=404)
 
 
+def _media_auth_check(request, filename):
+    """Returns (auth_dict, item_id_int) or (None, None) if denied.
+    Filename is `{id}.mp4` or `{id}.jpg`; we extract id and verify
+    the item belongs to user's allowed_sources.
+    """
+    auth = _check_auth(request)
+    if not auth['ok']:
+        return None, None
+    # Extract numeric id from filename (basename only, no path traversal)
+    stem = Path(filename).stem
+    try:
+        item_id = int(stem)
+    except (ValueError, TypeError):
+        return None, None
+    # Verify item exists and is in allowed sources
+    src_clause, src_params = _source_where_clause(auth)
+    row = _db_query(
+        "SELECT 1 FROM items WHERE id=? AND " + src_clause + " LIMIT 1",
+        [item_id] + src_params,
+    )
+    if not row:
+        return None, None
+    return auth, item_id
+
+
 async def serve_video(request):
     filename = request.match_info["filename"]
-    filepath = VIDEOS_DIR / filename
+    auth, _ = await asyncio.to_thread(_media_auth_check, request, filename)
+    if not auth:
+        return web.Response(status=404)  # 404 not 401: avoid revealing existence
+    filepath = VIDEOS_DIR / Path(filename).name  # strip any path component
     if not filepath.exists():
         return web.Response(status=404)
     return web.FileResponse(filepath, headers={
@@ -1974,12 +2102,15 @@ async def serve_video(request):
 
 async def serve_thumb(request):
     filename = request.match_info["filename"]
-    filepath = THUMBS_DIR / filename
+    auth, _ = await asyncio.to_thread(_media_auth_check, request, filename)
+    if not auth:
+        return web.Response(status=404)
+    filepath = THUMBS_DIR / Path(filename).name
     if not filepath.exists():
         return web.Response(status=404)
     return web.FileResponse(filepath, headers={
         "Content-Type": "image/jpeg",
-        "Cache-Control": "public, max-age=86400",
+        "Cache-Control": "private, max-age=86400",
     })
 
 
@@ -1996,9 +2127,10 @@ def create_web_app():
     app.router.add_get("/api/top-pixels", api_top_pixels)
     app.router.add_get("/api/buyers", api_buyers)
     app.router.add_get("/api/favorites", api_favorites)
-    app.router.add_get("/api/lifespan/{id}", api_lifespan)
+    # Literal-suffix routes BEFORE param route (aiohttp matches in order)
     app.router.add_get("/api/lifespan/top", api_lifespan_top)
     app.router.add_get("/api/lifespan/badges", api_lifespan_badges)
+    app.router.add_get("/api/lifespan/{id}", api_lifespan)
     app.router.add_get("/api/favorites/ids", api_favorite_ids)
     app.router.add_post("/api/favorites/toggle", api_favorite_toggle)
     app.router.add_post("/api/buyers/{id}/rename", api_buyer_rename)

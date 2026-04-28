@@ -175,8 +175,8 @@ def main():
                 continue
 
         conn.execute(
-            "INSERT INTO items (created_at, fb_url, translation, tracking_domain, tracking_url, sub4, sub5, pix) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO items (created_at, fb_url, translation, tracking_domain, tracking_url, sub4, sub5, pix, bot_source) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'spy')",
             (item['created_at'], item['fb_url'], item['translation'],
              item['tracking_domain'], item['tracking_url'],
              item['sub4'], item['sub5'], item['pix']),

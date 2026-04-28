@@ -27,7 +27,13 @@ except Exception:
 
 log = logging.getLogger("offer_classifier")
 
-DB_PATH = "/workspace/fb-bot/spy_data.db"
+# DB_PATH: предпочитаем импортировать из app (где он динамически определяется
+# относительно __file__), а на fallback — стандартный путь.
+try:
+    from app import DB_PATH as _APP_DB_PATH
+    DB_PATH = str(_APP_DB_PATH)
+except Exception:
+    DB_PATH = "/workspace/fb-bot/spy_data.db"
 MOBILE_UA = (
     "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) "
     "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"

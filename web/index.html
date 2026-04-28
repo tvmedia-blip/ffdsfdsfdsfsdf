@@ -416,7 +416,7 @@ function flag(code) {
   return String.fromCodePoint(...[...code.toUpperCase()].map(c=>c.charCodeAt(0)+127397));
 }
 
-function esc(s) { if(!s)return''; return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function esc(s) { if(s==null)return''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/\//g,'&#47;'); }
 
 function renderActiveFilters() {
   const bar = $('active-filters');
@@ -452,6 +452,13 @@ function urlSrc(path) {
   if (!isMultiPortal()) return path;
   const sep = path.includes('?') ? '&' : '?';
   return path + sep + 'source=' + getCurrentSource();
+}
+
+// Helper: media URL c auth-токеном (нужен для <img>/<video>, которые не проходят через fetch-interceptor)
+function mediaUrl(path) {
+  const tok = getAuth();
+  if (!tok) return path;
+  return path + (path.includes('?') ? '&' : '?') + 'auth=' + encodeURIComponent(tok);
 }
 
 function buildParams() {
@@ -490,7 +497,7 @@ function renderCard(item) {
   return `
     <div class="card" onclick="openModal(${item.id})">
       <div class="thumb-wrap">
-        ${item.thumb_filename ? `<img src="/api/thumbs/${esc(item.thumb_filename)}" loading="lazy" alt="" onerror="this.remove()">` : ''}
+        ${item.thumb_filename ? `<img src="${mediaUrl('/api/thumbs/' + esc(item.thumb_filename))}" loading="lazy" alt="" onerror="this.remove()">` : ''}
         ${f ? `<span class="geo-flag">${f}</span>` : ''}${(isMultiPortal() && item.bot_source) ? `<span class="bot-source-badge ${item.bot_source}">${item.bot_source === 'translator' ? '🌐' : '🕵️'}</span>` : ''}
         ${item.tracking_url && item.tracking_url.includes('?media_type=video&') ? '<span class="geo-flag" style="left:auto;right:6px">💎</span>' : ''}
         <div class="play-icon"></div>
@@ -624,8 +631,8 @@ function openModal(id) {
   const vidStub = document.getElementById('modal-video-stub');
   if (vidStub) vidStub.remove();
   if (item.video_filename) {
-    vid.src = '/api/videos/' + item.video_filename;
-    vid.poster = item.thumb_filename ? '/api/thumbs/' + item.thumb_filename : '';
+    vid.src = mediaUrl('/api/videos/' + item.video_filename);
+    vid.poster = item.thumb_filename ? mediaUrl('/api/thumbs/' + item.thumb_filename) : '';
     vid.style.display = 'block';
     vid.onerror = () => {
       vid.style.display = 'none';
@@ -676,7 +683,7 @@ async function loadSimilar(id) {
     sec.style.display = 'block';
     grid.innerHTML = items.map(s => `
       <div class="similar-card" onclick="openSimilar(${s.id})" title="${esc(s.rel_label || s.relationship || '')}">
-        ${s.thumb_filename ? `<img src="/api/thumbs/${esc(s.thumb_filename)}" loading="lazy" alt="" onerror="this.style.display='none';this.parentNode.style.background='#e5e7eb'">` : '<div style="aspect-ratio:16/9;background:#e5e7eb"></div>'}
+        ${s.thumb_filename ? `<img src="${mediaUrl('/api/thumbs/' + esc(s.thumb_filename))}" loading="lazy" alt="" onerror="this.style.display='none';this.parentNode.style.background='#e5e7eb'">` : '<div style="aspect-ratio:16/9;background:#e5e7eb"></div>'}
         <div class="similar-info">
           <span>${s.rel_icon || ''}</span> ${flag(s.geo)} ${esc(s.tracking_domain || '')}
           <div style="font-size:9px;opacity:0.7">${esc(s.rel_label || '')} &middot; score ${s.score || ''}</div>
@@ -978,7 +985,7 @@ async function loadFavorites() {
       return `
       <div class="card" onclick="openModal(${item.id})">
         <div class="thumb-wrap">
-          ${item.thumb_filename ? `<img src="/api/thumbs/${esc(item.thumb_filename)}" loading="lazy" alt="" onerror="this.remove()">` : ''}
+          ${item.thumb_filename ? `<img src="${mediaUrl('/api/thumbs/' + esc(item.thumb_filename))}" loading="lazy" alt="" onerror="this.remove()">` : ''}
           ${f ? `<span class="geo-flag">${f}</span>` : ''}${(isMultiPortal() && item.bot_source) ? `<span class="bot-source-badge ${item.bot_source}">${item.bot_source === 'translator' ? '🌐' : '🕵️'}</span>` : ''}
           <div class="play-icon"></div>
         </div>
@@ -1015,8 +1022,8 @@ function renderReel(item) {
   const f = item.geo ? flag(item.geo) : '';
   return `
     <div class="reel-page" data-id="${item.id}">
-      <video src="/api/videos/${esc(item.video_filename)}"
-             ${item.thumb_filename ? `poster="/api/thumbs/${esc(item.thumb_filename)}"` : ''}
+      <video src="${mediaUrl('/api/videos/' + esc(item.video_filename))}"
+             ${item.thumb_filename ? `poster="${mediaUrl('/api/thumbs/' + esc(item.thumb_filename))}"` : ''}
              loop ${_reelsMuted ? 'muted' : ''} playsinline preload="metadata"
              onclick="this.paused?this.play():this.pause()"
              onerror="this.outerHTML='<div class=reel-no-video>📼 Видео в архиве</div>'"></video>
