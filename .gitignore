@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.claude/
+.vscode/
+.idea/
+
+# Backups
+*.save
+*.bak
+*.bak-*
+
+# Project
+spy_data.db
+*.db-shm
+*.db-wal
+videos/
+thumbs/
+media/
+vault/
+logs/
+*.log
+backups/
+
+# Secrets (just in case)
+.env
+.env.*
