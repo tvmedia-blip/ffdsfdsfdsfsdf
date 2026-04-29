@@ -793,14 +793,20 @@ async function loadTopPixels() {
     const data = await res.json();
     if (!data.length) { $('pixel-bars').innerHTML = '<div style="color:var(--text-dim);font-size:13px">No data</div>'; return; }
     const max = data[0].count;
-    $('pixel-bars').innerHTML = data.map(d => `
+    $('pixel-bars').innerHTML = data.map(d => {
+      const doms = Array.isArray(d.domains) ? d.domains : [];
+      const first = doms[0] || '';
+      const more = doms.length > 1 ? ` +${doms.length - 1}` : '';
+      const tip = esc(doms.join(', '));
+      const label = first ? `${esc(first)}${more}` : `${doms.length} doms`;
+      return `
       <div class="domain-bar" onclick="filterByPix('${esc(d.pix)}')">
         <span class="bar-name" title="${esc(d.pix)}">${esc(d.pix)}</span>
-        <span class="bar-geos">${d.domains.slice(0,2).map(x => esc(x).slice(0,15)).join(', ')}</span>
+        <span class="bar-geos" title="${tip}" style="min-width:200px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${label}</span>
         <div class="bar-track"><div class="bar-fill" style="width:${Math.round(d.count/max*100)}%"></div></div>
         <span class="bar-count">${d.count}</span>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
   } catch(e) { console.error('Top pixels error:', e); }
 }
 
