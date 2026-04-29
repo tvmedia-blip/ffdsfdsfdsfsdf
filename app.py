@@ -1955,7 +1955,8 @@ async def api_top_pixels(request):
     sql = f"""
         SELECT pix, COUNT(*) as cnt,
                MAX(created_at) as last_seen,
-               GROUP_CONCAT(DISTINCT tracking_domain) as domains
+               GROUP_CONCAT(DISTINCT tracking_domain) as domains,
+               GROUP_CONCAT(DISTINCT geo) as geos
         FROM items
         WHERE {src_clause} AND pix IS NOT NULL AND pix != '' AND pix != 'unknown'
               AND created_at >= datetime('now', ?)
@@ -1969,6 +1970,7 @@ async def api_top_pixels(request):
         "count": r["cnt"],
         "last_seen": r["last_seen"],
         "domains": r["domains"].split(",")[:5] if r["domains"] else [],
+        "geos": [g for g in (r["geos"].split(",") if r["geos"] else []) if g and g != 'XX'],
     } for r in rows])
 
 

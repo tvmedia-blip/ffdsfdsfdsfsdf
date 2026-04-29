@@ -794,15 +794,13 @@ async function loadTopPixels() {
     if (!data.length) { $('pixel-bars').innerHTML = '<div style="color:var(--text-dim);font-size:13px">No data</div>'; return; }
     const max = data[0].count;
     $('pixel-bars').innerHTML = data.map(d => {
-      const doms = Array.isArray(d.domains) ? d.domains : [];
-      const first = doms[0] || '';
-      const more = doms.length > 1 ? ` +${doms.length - 1}` : '';
-      const tip = esc(doms.join(', '));
-      const label = first ? `${esc(first)}${more}` : `${doms.length} doms`;
+      const geos = Array.isArray(d.geos) ? d.geos : [];
+      const flags = geos.map(g => flag(g)).join('');
+      const tip = geos.join(', ') + (d.domains && d.domains.length ? ' · domains: ' + d.domains.slice(0,5).join(', ') : '');
       return `
       <div class="domain-bar" onclick="filterByPix('${esc(d.pix)}')">
         <span class="bar-name" title="${esc(d.pix)}">${esc(d.pix)}</span>
-        <span class="bar-geos" title="${tip}" style="min-width:200px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${label}</span>
+        <span class="bar-geos" title="${esc(tip)}" style="min-width:120px;max-width:160px;overflow:hidden;white-space:nowrap;font-size:14px">${flags || '<span style="font-size:11px;color:var(--text-dim)">no geo</span>'}</span>
         <div class="bar-track"><div class="bar-fill" style="width:${Math.round(d.count/max*100)}%"></div></div>
         <span class="bar-count">${d.count}</span>
       </div>`;
