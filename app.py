@@ -21,7 +21,6 @@ try:
     from buyer_fingerprint import classify as classify_buyer, detect_agency
     from similar_engine import SimilarEngine, CardData, RELATIONSHIP_LABELS
     from unique_filter import UniqueIndex, compute_content_hash as new_content_hash
-    from creative_lifespan import LifespanEngine
     import obsidian_sync
     import offer_classifier
 except ImportError:
@@ -30,14 +29,12 @@ except ImportError:
     from buyer_fingerprint import classify as classify_buyer, detect_agency
     from similar_engine import SimilarEngine, CardData, RELATIONSHIP_LABELS
     from unique_filter import UniqueIndex, compute_content_hash as new_content_hash
-    from creative_lifespan import LifespanEngine
     import obsidian_sync
     import offer_classifier
 
 # Global engines
 _similar_engine = None
 _unique_index = None
-_lifespan_engine = None
 
 import requests as http_requests
 import cloudscraper
@@ -324,47 +321,14 @@ def init_unique_index():
 init_unique_index()
 
 
-def init_lifespan_engine():
-    """Загружает LifespanEngine при старте."""
-    global _lifespan_engine
-    _lifespan_engine = LifespanEngine()
-    conn = _db_connect()
-    try:
-        conn.row_factory = sqlite3.Row
-        rows = conn.execute("SELECT * FROM items WHERE translation IS NOT NULL").fetchall()
-        items = []
-        for r in rows:
-            date_str = (r['created_at'] or '').split(' ')[0] if r['created_at'] else ''
-            items.append({
-                'id': str(r['id']),
-                'content_hash': r['content_hash'] or '',
-                'date': date_str,
-                'tracking_domain': r['tracking_domain'] or '',
-                'sub4': r['sub4'] or '',
-                'sub5': r['sub5'] or '',
-                'pix': r['pix'] or '',
-                'geo': r['geo'] or '',
-                'transcription': (r['translation'] or '')[:200],
-                'source': r['bot_source'] if 'bot_source' in r.keys() else 'spy',
-            })
-        _lifespan_engine.ingest(items)
-        stats = _lifespan_engine.get_stats()
-        log.info("[LIFESPAN] %d creatives, avg %.1fd, max %dd",
-                 stats['total_creatives'], stats['avg_lifespan'], stats['max_lifespan'])
-    finally:
-        conn.close()
-
-init_lifespan_engine()
-
-
 # Lock для защиты shared engine state от race condition между worker-thread (save_item)
 # и event-loop thread (web API). Используется в add_to_similar_index + при чтениях из API.
 _engines_lock = threading.RLock()
 
 
 def add_to_similar_index(item_id, content_hash=None, tracking_domain=None, sub4=None, sub5=None, pix=None, bot_source='spy'):
-    """Добавляет новый item в similar + unique + lifespan index. Source-aware. Thread-safe."""
-    global _similar_engine, _unique_index, _lifespan_engine
+    """Добавляет новый item в similar + unique index. Source-aware. Thread-safe."""
+    global _similar_engine, _unique_index
     with _engines_lock:
         if _similar_engine:
             _similar_engine.add_card(CardData(
@@ -380,18 +344,6 @@ def add_to_similar_index(item_id, content_hash=None, tracking_domain=None, sub4=
             _unique_index.add_item({
                 'id': str(item_id),
                 'content_hash': content_hash or '',
-                'source': bot_source,
-            })
-        if _lifespan_engine:
-            from datetime import datetime
-            _lifespan_engine.add_item({
-                'id': str(item_id),
-                'content_hash': content_hash or '',
-                'date': datetime.now().strftime('%Y-%m-%d'),
-                'tracking_domain': tracking_domain or '',
-                'sub4': sub4 or '',
-                'sub5': sub5 or '',
-                'pix': pix or '',
                 'source': bot_source,
             })
 
@@ -494,6 +446,13 @@ def save_item(translation, original_text=None, fb_url=None,
                 offer_classifier.schedule_live(row_id, tracking_url)
             except Exception as _e:
                 log.warning("[offer] schedule failed: %s", _e)
+        # Prokly auto-snapshot (no-op если auto=off; обрабатывает оба source)
+        if tracking_url:
+            try:
+                import prokly
+                prokly.maybe_capture(row_id)
+            except Exception:
+                pass
         return row_id
     except Exception as e:
         log.error("[DB] Ошибка сохранения: %s", e)
@@ -1478,29 +1437,30 @@ def _db_scalar(sql, params=()):
 # ssteam   → видит только spy (legacy SPY-портал)
 # ssteam2  → видит spy + translator (расширенный портал)
 PASSWORDS = {
-    'REDACTED_PASSWORD_1':  {'allowed_sources': ['spy']},
-    'REDACTED_PASSWORD_2': {'allowed_sources': ['spy', 'translator']},
+    'ssteam':  {'allowed_sources': ['spy'], 'is_admin': False},
+    'ssteam2': {'allowed_sources': ['spy', 'translator'], 'is_admin': True},
 }
 
 
 def _check_auth(request):
-    """Возвращает dict: {ok: bool, allowed_sources: list, requested_source: str}.
+    """Возвращает dict: {ok: bool, allowed_sources: list, requested_source: str, is_admin: bool}.
     Берёт токен из X-Auth header или ?auth= query.
     """
     token = request.headers.get('X-Auth') or request.query.get('auth', '')
     cfg = PASSWORDS.get(token)
     if not cfg:
-        return {'ok': False, 'allowed_sources': ['spy'], 'requested_source': 'spy'}
+        return {'ok': False, 'allowed_sources': ['spy'], 'requested_source': 'spy', 'is_admin': False}
+    is_admin = bool(cfg.get('is_admin', False))
     requested = request.query.get('source', '').strip()
     allowed = cfg['allowed_sources']
     # Если ssteam (1 источник) — игнорируем requested, используем единственный allowed
     if len(allowed) == 1:
-        return {'ok': True, 'allowed_sources': allowed, 'requested_source': allowed[0]}
+        return {'ok': True, 'allowed_sources': allowed, 'requested_source': allowed[0], 'is_admin': is_admin}
     # ssteam2 — может выбирать конкретный источник или 'both'
     if requested in ('spy', 'translator'):
-        return {'ok': True, 'allowed_sources': allowed, 'requested_source': requested}
+        return {'ok': True, 'allowed_sources': allowed, 'requested_source': requested, 'is_admin': is_admin}
     # default = both
-    return {'ok': True, 'allowed_sources': allowed, 'requested_source': 'both'}
+    return {'ok': True, 'allowed_sources': allowed, 'requested_source': 'both', 'is_admin': is_admin}
 
 
 def _source_where_clause(auth):
@@ -1764,91 +1724,6 @@ async def api_top_offers(request):
     } for r in rows])
 
 
-async def api_lifespan(request):
-    auth = _check_auth(request)
-    if not auth['ok']:
-        return web.json_response({'error': 'unauthorized'}, status=401)
-    """Badge для одного item."""
-    try:
-        item_id = request.match_info["id"]
-    except KeyError:
-        return web.json_response({}, status=400)
-    # Source-isolation: убеждаемся что item виден этому юзеру
-    if not await asyncio.to_thread(_assert_item_visible, item_id, auth):
-        return web.json_response({}, status=404)
-    if _lifespan_engine:
-        with _engines_lock:
-            info = _lifespan_engine.get_lifespan(item_id)
-        if info:
-            return web.json_response(info)
-    return web.json_response({})
-
-
-async def api_lifespan_top(request):
-    auth = _check_auth(request)
-    if not auth['ok']:
-        return web.json_response({'error': 'unauthorized'}, status=401)
-    """Top running creatives."""
-    try:
-        limit = min(int(request.query.get("limit", 20)), 50)
-    except (ValueError, TypeError):
-        limit = 20
-    geo = request.query.get("geo", "").strip() or None
-    if _lifespan_engine:
-        with _engines_lock:
-            top = _lifespan_engine.get_top_runners(limit=limit, geo=geo, min_days=1)
-        # Source-filter: оставляем только items видимые юзеру
-        # NB: get_top_runners возвращает агрегаты; фильтруем сюда же по item_ids
-        if top:
-            ids_in_top = []
-            for entry in top:
-                ids_in_top.extend(entry.get('item_ids', [])[:5])
-            if ids_in_top:
-                src_clause, src_params = _source_where_clause(auth)
-                placeholders = ",".join("?" * len(ids_in_top))
-                visible_rows = await asyncio.to_thread(
-                    _db_query,
-                    f"SELECT id FROM items WHERE id IN ({placeholders}) AND " + src_clause,
-                    [int(i) for i in ids_in_top] + src_params,
-                )
-                visible = {str(r['id']) for r in visible_rows}
-                top = [t for t in top if any(str(i) in visible for i in t.get('item_ids', [])[:5])]
-        return web.json_response(top)
-    return web.json_response([])
-
-
-async def api_lifespan_badges(request):
-    auth = _check_auth(request)
-    if not auth['ok']:
-        return web.json_response({'error': 'unauthorized'}, status=401)
-    """Badges для списка item_ids (batch). GET /api/lifespan/badges?ids=1,2,3"""
-    ids_str = request.query.get("ids", "")
-    if not ids_str:
-        return web.json_response({})
-    ids = [i.strip() for i in ids_str.split(",") if i.strip()]
-    # Source-isolation: фильтруем ids по тем что видны юзеру
-    if ids:
-        try:
-            int_ids = [int(i) for i in ids[:100]]
-            src_clause, src_params = _source_where_clause(auth)
-            placeholders = ",".join("?" * len(int_ids))
-            visible_rows = await asyncio.to_thread(
-                _db_query,
-                f"SELECT id FROM items WHERE id IN ({placeholders}) AND " + src_clause,
-                int_ids + src_params,
-            )
-            visible = {str(r['id']) for r in visible_rows}
-            ids = [i for i in ids if i in visible]
-        except (ValueError, TypeError):
-            return web.json_response({})
-    result = {}
-    if _lifespan_engine:
-        with _engines_lock:
-            for iid in ids[:100]:
-                result[iid] = _lifespan_engine.get_badge(iid)
-    return web.json_response(result)
-
-
 async def api_favorites(request):
     auth = _check_auth(request)
     if not auth['ok']:
@@ -1991,6 +1866,75 @@ async def api_item(request):
     return web.json_response(rows[0])
 
 
+async def api_me(request):
+    """Возвращает контекст текущего юзера (админ или нет, какие источники видит)."""
+    auth = _check_auth(request)
+    if not auth['ok']:
+        return web.json_response({'ok': False, 'is_admin': False}, status=401)
+    return web.json_response({
+        'ok': True,
+        'is_admin': bool(auth.get('is_admin', False)),
+        'allowed_sources': auth['allowed_sources'],
+    })
+
+
+async def api_item_delete(request):
+    """Жёстко удаляет карточку из items + favorites + видео/превью на диске.
+    Только для админов (ssteam2)."""
+    auth = _check_auth(request)
+    if not auth['ok']:
+        return web.json_response({'error': 'unauthorized'}, status=401)
+    if not auth.get('is_admin'):
+        return web.json_response({'error': 'forbidden'}, status=403)
+    try:
+        item_id = int(request.match_info["id"])
+    except (ValueError, TypeError):
+        return web.json_response({'error': 'bad request'}, status=400)
+
+    rows = await asyncio.to_thread(
+        _db_query,
+        "SELECT video_filename, thumb_filename FROM items WHERE id=?",
+        [item_id],
+    )
+    if not rows:
+        return web.json_response({'error': 'not found'}, status=404)
+    row = rows[0]
+    video_fn = row.get('video_filename')
+    thumb_fn = row.get('thumb_filename')
+
+    def _delete_db():
+        conn = sqlite3.connect(DB_PATH, timeout=10)
+        try:
+            try:
+                conn.execute("DELETE FROM favorites WHERE item_id=?", [item_id])
+            except sqlite3.Error:
+                pass
+            conn.execute("DELETE FROM items WHERE id=?", [item_id])
+            conn.commit()
+        finally:
+            conn.close()
+
+    await asyncio.to_thread(_delete_db)
+
+    # Удаляем медиа-файлы (best-effort)
+    if video_fn:
+        vp = VIDEOS_DIR / Path(video_fn).name
+        try:
+            if vp.exists():
+                vp.unlink()
+        except Exception:
+            pass
+    if thumb_fn:
+        tp = THUMBS_DIR / Path(thumb_fn).name
+        try:
+            if tp.exists():
+                tp.unlink()
+        except Exception:
+            pass
+
+    return web.json_response({'ok': True, 'id': item_id})
+
+
 async def api_similar(request):
     auth = _check_auth(request)
     if not auth['ok']:
@@ -2122,6 +2066,14 @@ def create_web_app():
         offer_classifier.MAIN_LOOP = asyncio.get_running_loop()
         log.info("[offer] captured main loop for live classification")
     app.on_startup.append(_capture_loop)
+
+    # Prokly: optional, isolated. Failure here must not break the rest.
+    try:
+        import prokly
+        prokly.register_routes(app, _check_auth)
+        log.info("[PROKLY] routes + worker registered")
+    except Exception as _pe:
+        log.warning("[PROKLY] disabled: %s", _pe)
     app.router.add_get("/api/items", api_items)
     app.router.add_get("/api/stats", api_stats)
     app.router.add_get("/api/top-domains", api_top_domains)
@@ -2130,13 +2082,12 @@ def create_web_app():
     app.router.add_get("/api/buyers", api_buyers)
     app.router.add_get("/api/favorites", api_favorites)
     # Literal-suffix routes BEFORE param route (aiohttp matches in order)
-    app.router.add_get("/api/lifespan/top", api_lifespan_top)
-    app.router.add_get("/api/lifespan/badges", api_lifespan_badges)
-    app.router.add_get("/api/lifespan/{id}", api_lifespan)
     app.router.add_get("/api/favorites/ids", api_favorite_ids)
     app.router.add_post("/api/favorites/toggle", api_favorite_toggle)
     app.router.add_post("/api/buyers/{id}/rename", api_buyer_rename)
     app.router.add_get("/api/item/{id}", api_item)
+    app.router.add_get("/api/me", api_me)
+    app.router.add_delete("/api/items/{id}", api_item_delete)
     app.router.add_get("/api/similar/{id}", api_similar)
     app.router.add_get("/api/videos/{filename}", serve_video)
     app.router.add_get("/api/thumbs/{filename}", serve_thumb)

@@ -137,13 +137,99 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .fav-btn { background: none; border: none; cursor: pointer; font-size: 18px; opacity: 0.3; transition: all 0.15s; padding: 2px; line-height: 1; }
 .fav-btn:hover { opacity: 0.7; }
 .fav-btn.active { opacity: 1; }
+.del-btn { background: none; border: none; cursor: pointer; font-size: 14px; opacity: 0.35; transition: all 0.15s; padding: 2px 4px; line-height: 1; color: #dc2626; }
+.del-btn:hover { opacity: 1; }
+.ss-del-btn { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.55); border: none; border-radius: 4px; cursor: pointer; font-size: 12px; padding: 2px 6px; color: #fecaca; z-index: 2; opacity: 0; transition: opacity 0.15s; }
+.prokly-card:hover .ss-del-btn { opacity: 1; }
+.ss-del-btn:hover { background: #dc2626; color: white; }
+
+/* Prokly snapshot modal */
+.prokly-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1100; justify-content: center; align-items: flex-start; padding: 30px 20px; overflow-y: auto; }
+.prokly-modal-overlay.open { display: flex; }
+.prokly-modal { background: var(--surface); border-radius: 14px; width: 100%; max-width: 820px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.2); display: flex; flex-direction: column; }
+.prokly-modal-header { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--border); }
+.prokly-modal-header .pm-geo { font-size: 22px; }
+.prokly-modal-header .pm-title { flex: 1; font-size: 14px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prokly-modal-header .pm-status { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: var(--bg); color: var(--text-dim); border: 1px solid var(--border); text-transform: uppercase; letter-spacing: 0.4px; }
+.prokly-modal-header .pm-status.ok { color: #16a34a; border-color: #16a34a; }
+.prokly-modal-header .pm-status.bad { color: #dc2626; border-color: #dc2626; }
+.prokly-modal-header .pm-close { width: 32px; height: 32px; border: none; background: var(--bg); border-radius: 8px; cursor: pointer; font-size: 18px; color: var(--text-dim); display: flex; align-items: center; justify-content: center; }
+.prokly-modal-header .pm-close:hover { background: var(--border); }
+.pm-view-tabs { display: flex; gap: 0; padding: 6px 16px 0; border-bottom: 1px solid var(--border); background: var(--surface); }
+.pm-view-tabs button { padding: 8px 14px; border: none; background: transparent; color: var(--text-dim); font-size: 12px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; font-weight: 500; }
+.pm-view-tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+.pm-view-tabs button:hover:not(.active) { color: var(--text); }
+.pm-content { background: white; height: 70vh; overflow: hidden; position: relative; }
+.pm-content iframe { width: 100%; height: 100%; border: none; display: block; background: white; }
+.pm-view { display: none; height: 100%; width: 100%; overflow: auto; background: #0b1220; }
+.pm-view.active { display: block; }
+.pm-view img { width: 100%; max-width: 100%; height: auto; display: block; }
+.pm-view .empty-shot { color: #94a3b8; padding: 60px 20px; text-align: center; font-size: 13px; }
+.pm-creative-section { padding: 14px 20px; border-top: 1px solid var(--border); background: var(--bg); }
+.pm-creative-section h4 { font-size: 11px; font-weight: 600; color: var(--text-dim); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.6px; }
+.pm-creative-card { display: grid; grid-template-columns: 180px 1fr; gap: 14px; padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: all 0.15s; align-items: center; }
+.pm-creative-card:hover { border-color: var(--accent); box-shadow: 0 4px 12px rgba(0,0,0,0.06); transform: translateY(-1px); }
+.pm-creative-card .ccc-thumb { aspect-ratio: 16/9; background: #e5e7eb; border-radius: 6px; overflow: hidden; position: relative; }
+.pm-creative-card .ccc-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pm-creative-card .ccc-thumb .play { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255,255,255,0.85); border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: #111; font-size: 14px; }
+.pm-creative-card .ccc-thumb .ccc-flag { position: absolute; top: 4px; left: 4px; background: rgba(255,255,255,0.92); padding: 1px 4px; border-radius: 3px; font-size: 13px; }
+.pm-creative-card .ccc-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.pm-creative-card .ccc-meta { display: flex; gap: 6px; flex-wrap: wrap; font-size: 11px; color: var(--text-dim); }
+.pm-creative-card .ccc-text { font-size: 12px; line-height: 1.45; color: var(--text); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.pm-creative-card .ccc-domain { font-size: 11px; color: var(--text); font-weight: 500; }
+.pm-creative-empty { padding: 14px; color: var(--text-dim); font-size: 12px; text-align: center; background: var(--surface); border: 1px dashed var(--border); border-radius: 8px; }
+.prokly-modal-body { padding: 14px 20px; display: flex; flex-direction: column; gap: 10px; }
+.prokly-modal-meta { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; font-size: 12px; }
+.prokly-modal-meta .lbl { color: var(--text-dim); white-space: nowrap; }
+.prokly-modal-meta .val { color: var(--text); word-break: break-all; }
+.prokly-modal-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 6px; border-top: 1px solid var(--border); margin-top: 6px; }
+.prokly-modal-actions a, .prokly-modal-actions button { padding: 8px 14px; font-size: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 8px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+.prokly-modal-actions a:hover, .prokly-modal-actions button:hover { border-color: var(--accent); color: var(--accent); }
+.prokly-modal-actions .pm-primary { background: var(--accent); color: white; border-color: var(--accent); }
+.prokly-modal-actions .pm-primary:hover { background: var(--accent); color: white; opacity: 0.9; }
 .tab-bar { display: flex; gap: 0; border-bottom: 2px solid var(--border); margin: 0 32px; }
 .tab-bar button { padding: 8px 20px; background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -2px; cursor: pointer; font-size: 13px; color: var(--text-dim); transition: all 0.15s; }
 .tab-bar button.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
 .tab-bar button:hover { color: var(--text); }
 
-/* Lifespan badge */
-.lifespan-badge { display: inline-flex; align-items: center; gap: 2px; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; color: #fff; line-height: 1.4; }
+/* Prokly */
+.prokly-toolbar { padding: 10px 32px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; border-bottom: 1px solid var(--border); background: var(--surface); }
+.prokly-toolbar .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.prokly-toolbar .seg button { padding: 6px 14px; border: none; background: transparent; color: var(--text-dim); font-size: 12px; cursor: pointer; }
+.prokly-toolbar .seg button.active { background: var(--accent); color: white; }
+.prokly-toolbar .auto-toggle { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; }
+.prokly-toolbar .auto-toggle input { accent-color: var(--accent); }
+.prokly-toolbar .stat { font-size: 11px; color: var(--text-dim); padding: 0 6px; }
+.prokly-toolbar .stat strong { color: var(--text); }
+
+.prokly-settings { padding: 18px 32px; }
+.prokly-settings h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+.prokly-settings .form-row { display: grid; grid-template-columns: 100px 1fr 200px auto; gap: 10px; margin-bottom: 10px; align-items: center; }
+.prokly-settings .form-row input { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; }
+.prokly-settings .form-row button { padding: 6px 14px; border: 1px solid var(--accent); border-radius: 6px; background: var(--accent); color: white; font-size: 12px; cursor: pointer; }
+.prokly-settings table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+.prokly-settings th, .prokly-settings td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 12px; }
+.prokly-settings th { background: var(--bg); color: var(--text-dim); font-weight: 600; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; }
+.prokly-settings td.status-ok { color: #16a34a; font-weight: 600; }
+.prokly-settings td.status-bad { color: #dc2626; font-weight: 600; }
+.prokly-settings td.status-untested { color: #d97706; }
+.prokly-settings .btn-mini { padding: 4px 10px; font-size: 11px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface); color: var(--text); cursor: pointer; margin-right: 4px; }
+.prokly-settings .btn-mini:hover { border-color: var(--accent); }
+.prokly-settings .btn-mini.danger:hover { border-color: #dc2626; color: #dc2626; }
+
+.prokly-gallery { padding: 18px 32px; }
+.prokly-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; cursor: pointer; transition: all 0.15s; display: flex; flex-direction: column; }
+.prokly-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+.prokly-card .ss-wrap { position: relative; aspect-ratio: 16/9; background: #e5e7eb; overflow: hidden; }
+.prokly-card .ss-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.prokly-card .ss-wrap .ss-status { position: absolute; top: 6px; right: 6px; font-size: 10px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 4px; }
+.prokly-card .ss-wrap .ss-geo { position: absolute; top: 6px; left: 6px; background: rgba(255,255,255,0.92); border-radius: 4px; padding: 1px 5px; font-size: 14px; }
+.prokly-card .ss-body { padding: 10px 12px; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.prokly-card .ss-body .url { font-size: 11px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prokly-card .ss-body .title { font-size: 12px; font-weight: 600; color: var(--text); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.prokly-card .ss-body .date { font-size: 10px; color: var(--text-dim); margin-top: auto; }
+
+/* Login */
 
 /* Login */
 .login-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 2000; display: flex; align-items: center; justify-content: center; }
@@ -171,44 +257,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .grid-controls button { width: 28px; height: 28px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 .grid-controls button:hover { border-color: var(--accent); }
 .grid-controls span { font-size: 11px; color: var(--text-dim); }
-.btn-reels { padding: 6px 14px; border: 1px solid var(--accent); border-radius: 6px; background: var(--accent); color: white; font-size: 13px; font-weight: 600; cursor: pointer; margin-left: 8px; display: flex; align-items: center; gap: 4px; }
-.btn-reels:hover { opacity: 0.9; }
-.btn-reels::before { content: '\25B6'; font-size: 11px; }
-
-.reels-overlay { position: fixed; inset: 0; background: #000; z-index: 1000; display: none; }
-.reels-overlay.open { display: block; }
-.reels-stage { width: 100%; height: 100vh; overflow-y: auto; overflow-x: hidden; scroll-snap-type: y mandatory; -webkit-overflow-scrolling: touch; }
-.reels-stage::-webkit-scrollbar { display: none; }
-
-.reel-page { width: 100%; height: 100vh; scroll-snap-align: start; scroll-snap-stop: always; position: relative; display: flex; align-items: center; justify-content: center; background: #000; }
-.reel-page video { max-width: 100%; max-height: 100vh; width: auto; height: 100vh; object-fit: contain; background: #000; cursor: pointer; }
-.reel-no-video { color: #6b7280; font-size: 14px; padding: 30px; text-align: center; }
-
-.reel-overlay-info { position: absolute; left: 0; right: 80px; bottom: 0; padding: 50px 16px 24px; background: linear-gradient(transparent, rgba(0,0,0,0.85)); color: white; pointer-events: none; }
-.reel-overlay-info > * { pointer-events: auto; }
-.reel-overlay-info .reel-text { font-size: 14px; line-height: 1.45; margin-bottom: 10px; max-height: 25vh; overflow: hidden; }
-.reel-overlay-info .reel-badges { display: flex; gap: 6px; flex-wrap: wrap; }
-.reel-overlay-info .reel-badges .badge { background: rgba(255,255,255,0.18); color: white; padding: 3px 9px; border-radius: 4px; font-size: 11px; backdrop-filter: blur(8px); cursor: pointer; }
-.reel-overlay-info .reel-badges .badge.offer { background: rgba(34,197,94,0.4); }
-.reel-overlay-info .reel-badges .badge.buyer { background: rgba(234,179,8,0.4); }
-
-.reel-actions { position: absolute; right: 12px; bottom: 80px; display: flex; flex-direction: column; gap: 14px; z-index: 2; }
-.reel-action-btn { width: 48px; height: 48px; border: none; border-radius: 50%; background: rgba(0,0,0,0.55); color: white; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(6px); }
-.reel-action-btn:hover { background: rgba(0,0,0,0.75); }
-.reel-action-btn.active { background: rgba(220,38,38,0.85); color: white; }
-.reel-action-label { font-size: 10px; color: white; text-align: center; margin-top: -4px; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
-
-.reels-close { position: fixed; top: 14px; right: 14px; width: 44px; height: 44px; border: none; border-radius: 50%; background: rgba(0,0,0,0.6); color: white; font-size: 22px; cursor: pointer; z-index: 1002; backdrop-filter: blur(6px); }
-.reels-counter { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.85); font-size: 13px; font-weight: 500; z-index: 1002; background: rgba(0,0,0,0.5); padding: 6px 14px; border-radius: 999px; backdrop-filter: blur(6px); }
-.reels-tip { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.5); font-size: 11px; z-index: 1002; pointer-events: none; }
-
-@media (max-width: 720px) {
-  .reel-overlay-info { right: 70px; }
-  .reel-actions { right: 8px; bottom: 90px; }
-  .reel-action-btn { width: 44px; height: 44px; font-size: 20px; }
-}
-
-
 /* UUID */
 .uid-tag { font-size: 9px; color: var(--text-dim); font-family: monospace; opacity: 0.6; }
 
@@ -239,6 +287,27 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 /* Similar in modal */
 .similar-section { border-top: 1px solid var(--border); padding-top: 12px; }
 .similar-section h4 { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-dim); }
+
+/* Прокли снимок в модалке креатива */
+.item-prokly-section { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 4px; }
+.item-prokly-section h4 { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-dim); display: flex; align-items: center; gap: 8px; }
+.item-prokly-section h4 .actions { margin-left: auto; }
+.item-prokly-section h4 .actions button { padding: 3px 10px; font-size: 11px; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 5px; cursor: pointer; }
+.item-prokly-section h4 .actions button:hover { border-color: var(--accent); color: var(--accent); }
+.ipc-card { display: grid; grid-template-columns: 200px 1fr; gap: 12px; padding: 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.15s; }
+.ipc-card:hover { border-color: var(--accent); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+.ipc-thumb { aspect-ratio: 16/9; background: #e5e7eb; border-radius: 6px; overflow: hidden; position: relative; }
+.ipc-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ipc-flag { position: absolute; top: 4px; left: 4px; background: rgba(255,255,255,0.92); padding: 1px 4px; border-radius: 3px; font-size: 13px; }
+.ipc-status { position: absolute; top: 4px; right: 4px; font-size: 10px; padding: 1px 5px; border-radius: 3px; color: white; text-transform: uppercase; letter-spacing: 0.4px; }
+.ipc-status.ok { background: #16a34a; }
+.ipc-status.bad { background: #dc2626; }
+.ipc-empty-thumb { display: flex; align-items: center; justify-content: center; color: var(--text-dim); font-size: 11px; width: 100%; height: 100%; }
+.ipc-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; justify-content: center; }
+.ipc-title { font-size: 12px; font-weight: 500; line-height: 1.4; color: var(--text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ipc-meta { font-size: 11px; color: var(--text-dim); }
+.ipc-empty { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; background: var(--bg); border: 1px dashed var(--border); border-radius: 8px; font-size: 12px; color: var(--text-dim); gap: 12px; }
+.ipc-empty button { padding: 5px 12px; font-size: 12px; border: 1px solid var(--accent); background: var(--accent); color: white; border-radius: 6px; cursor: pointer; white-space: nowrap; }
 .similar-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .similar-card { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; cursor: pointer; transition: border-color 0.15s; }
 .similar-card:hover { border-color: var(--accent); }
@@ -289,7 +358,6 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
     <button onclick="changeGrid(-1)" title="Smaller">−</button>
     <span id="grid-size-label">6</span>
     <button onclick="changeGrid(1)" title="Bigger">+</button>
-    <button class="btn-reels" id="btn-reels" onclick="openReels()" title="Reels mode (R)">REELS</button>
     <button onclick="logout()" title="Logout" style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text-dim);font-size:11px;cursor:pointer">⎋</button>
   </div>
 </div>
@@ -356,6 +424,50 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 <div class="tab-bar">
   <button class="active" id="tab-all" onclick="switchTab('all')">All</button>
   <button id="tab-favorites" onclick="switchTab('favorites')">Favorites <span id="fav-count"></span></button>
+  <button id="tab-prokly" onclick="switchTab('prokly')">Проклы <span id="prokly-count" style="color:var(--text-dim);font-weight:400"></span></button>
+</div>
+
+<!-- Prokly: tab content -->
+<div id="prokly-container" style="display:none">
+  <div class="prokly-toolbar">
+    <div class="seg">
+      <button id="prokly-tab-gallery" class="active" onclick="proklySwitch('gallery')">Gallery</button>
+      <button id="prokly-tab-settings" onclick="proklySwitch('settings')">Settings</button>
+    </div>
+    <label class="auto-toggle">
+      <input type="checkbox" id="prokly-auto" onchange="proklyToggleAuto(this.checked)">
+      Auto-snapshot новых карточек
+    </label>
+    <span class="stat">Queue: <strong id="prokly-q-pending">—</strong> pending · <strong id="prokly-q-prog">—</strong> in progress · <strong id="prokly-q-done">—</strong> done · <strong id="prokly-q-fail">—</strong> failed</span>
+    <span class="stat">Snapshots: <strong id="prokly-snap-total">—</strong></span>
+  </div>
+
+  <div id="prokly-pane-settings" class="prokly-settings" style="display:none">
+    <h3>Add / Update proxy per GEO</h3>
+    <div class="form-row">
+      <input type="text" id="prx-geo" placeholder="GB" maxlength="3" style="text-transform:uppercase">
+      <input type="text" id="prx-url" placeholder="http://user:pass@host:port  (or socks5://...)">
+      <input type="text" id="prx-label" placeholder="label (optional)">
+      <button onclick="proklySaveProxy()">Save</button>
+    </div>
+    <div class="form-row" style="grid-template-columns: 1fr 200px 200px auto; margin-top:6px">
+      <input type="text" id="prx-ua" placeholder="Mobile User-Agent (optional, default Android Chrome 147)">
+      <input type="text" id="prx-locale" placeholder="locale (en-GB)">
+      <input type="text" id="prx-tz" placeholder="timezone (Europe/London)">
+      <span style="color:var(--text-dim);font-size:11px;align-self:center">↑ device emulation</span>
+    </div>
+    <div id="prx-error" style="color:#dc2626;font-size:12px;margin-top:6px;display:none"></div>
+
+    <table>
+      <thead><tr><th>Geo</th><th>Proxy</th><th>Label</th><th>UA / Locale / TZ</th><th>Status</th><th>Detected</th><th>Last test</th><th></th></tr></thead>
+      <tbody id="prx-list"></tbody>
+    </table>
+  </div>
+
+  <div id="prokly-pane-gallery" class="prokly-gallery">
+    <div class="grid" id="prokly-grid"></div>
+    <div class="pagination" id="prokly-pagination"></div>
+  </div>
 </div>
 <div class="pagination" id="pagination-top"></div>
 <div class="grid" id="grid"></div>
@@ -370,14 +482,18 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
       <button class="modal-nav-btn" onclick="navModal(-1)" title="Previous (←)">&#8592;</button>
       <button class="modal-nav-btn" onclick="navModal(1)" title="Next (→)">&#8594;</button>
       <button class="fav-btn" id="modal-fav" onclick="toggleFavModal()" style="font-size:22px" title="Favorite">&#9734;</button>
+      <button class="modal-nav-btn" id="modal-del" onclick="deleteFromModal()" title="Удалить" style="display:none;color:#dc2626">&#x1F5D1;</button>
       <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
     <video class="modal-video" id="modal-video" controls preload="none"></video>
     <div class="modal-body">
       <div class="translation" id="modal-text"></div>
       <div class="links-section" id="modal-links"></div>
-      <div id="modal-lifespan" style="display:none;padding:8px 0;font-size:12px;color:var(--text-dim)"></div>
       <div class="meta-badges" id="modal-badges"></div>
+      <div class="item-prokly-section" id="item-prokly-section" style="display:none">
+        <h4>📸 Прокли <span class="actions" id="item-prokly-actions"></span></h4>
+        <div id="item-prokly-host"></div>
+      </div>
       <div class="similar-section" id="similar-section" style="display:none">
         <h4>Similar creatives</h4>
         <div class="similar-grid" id="similar-grid"></div>
@@ -386,11 +502,38 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
   </div>
 </div>
 
-<div class="reels-overlay" id="reels-overlay">
-  <button class="reels-close" onclick="closeReels()" title="Close (Esc)">&times;</button>
-  <div class="reels-counter" id="reels-counter">0 / 0</div>
-  <div class="reels-tip" id="reels-tip">Скрольте вертикально · клик по видео — пауза · стрелки ↑↓ · Esc — выход</div>
-  <div class="reels-stage" id="reels-stage"></div>
+<!-- Prokly snapshot modal -->
+<div class="prokly-modal-overlay" id="prokly-modal-overlay" onclick="proklyCloseModal(event)">
+  <div class="prokly-modal" id="prokly-modal" onclick="event.stopPropagation()">
+    <div class="prokly-modal-header">
+      <span class="pm-geo" id="pm-geo"></span>
+      <span class="pm-title" id="pm-title"></span>
+      <span class="pm-status" id="pm-status"></span>
+      <button class="pm-close" onclick="navProklyModal(-1)" title="Previous (←)">&#8592;</button>
+      <button class="pm-close" onclick="navProklyModal(1)" title="Next (→)">&#8594;</button>
+      <button class="pm-close" onclick="proklyCloseModal()" title="Close (Esc)">&times;</button>
+    </div>
+    <div class="pm-view-tabs" id="pm-view-tabs">
+      <button class="active" data-view="screenshot" onclick="proklySetView('screenshot')">📷 Скриншот</button>
+      <button data-view="html" onclick="proklySetView('html')">🌐 Страница</button>
+    </div>
+    <div class="pm-content" id="pm-content">
+      <div class="pm-view" id="pm-view-html" style="background:white">
+        <iframe id="pm-iframe" sandbox="allow-same-origin" referrerpolicy="no-referrer"></iframe>
+      </div>
+      <div class="pm-view active" id="pm-view-screenshot">
+        <div id="pm-shot-inner"></div>
+      </div>
+    </div>
+    <div class="pm-creative-section" id="pm-creative-section">
+      <h4>📹 Привязанный креатив</h4>
+      <div id="pm-creative-card-host"></div>
+    </div>
+    <div class="prokly-modal-body">
+      <div class="prokly-modal-meta" id="pm-meta"></div>
+      <div class="prokly-modal-actions" id="pm-actions"></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -505,11 +648,11 @@ function renderCard(item) {
       <div class="card-body">
         <div class="date" style="display:flex;align-items:center;gap:4px">
           <button class="fav-btn ${_favSet.has(item.id)?'active':''}" onclick="toggleFav(${item.id},event)" title="Favorite">${_favSet.has(item.id)?'\u2605':'\u2606'}</button>
+          ${isAdmin() ? `<button class="del-btn" onclick="deleteCard(${item.id},event)" title="\u0423\u0434\u0430\u043b\u0438\u0442\u044c">\u{1F5D1}</button>` : ''}
           ${formatDate(item.created_at)} ${item.uid ? `<span class="uid-tag">${esc(item.uid)}</span>` : ''}
         </div>
         <div class="preview">${esc(truncate(item.translation, 25))}</div>
         <div class="meta">
-          <span class="lifespan-badge" data-lifespan="${item.id}" style="display:none"></span>
           ${item.geo && item.geo!=='XX' ? `<span class="badge">${f} ${esc(item.geo)}</span>` : ''}
           ${item.tracking_domain ? `<span class="badge domain" onclick="filterByDomain('${esc(item.tracking_domain)}', event)">${esc(item.tracking_domain)}</span>` : ''}
           ${item.sub4 && item.sub4!=='unknown' ? `<span class="badge">4s: ${esc(item.sub4.length>20?item.sub4.slice(0,20)+'..':item.sub4)}</span>` : ''}
@@ -558,8 +701,6 @@ async function loadItems(append = false) {
       <span class="go-page"><input type="number" min="1" max="${data.pages}" placeholder="#" onkeydown="if(event.key==='Enter')goPage(+this.value)"><button onclick="goPage(+this.previousElementSibling.value)">Go</button></span>`;
     $('pagination-top').innerHTML = pagHtml;
     $('pagination-bottom').innerHTML = pagHtml;
-
-    loadLifespanBadges(data.items.map(i => i.id));
   } catch(e) { console.error('Load error:', e); }
   finally { _loadingMore = false; }
 }
@@ -575,22 +716,6 @@ window.addEventListener('scroll', () => {
     loadItems(true);
   }
 });
-
-async function loadLifespanBadges(ids) {
-  if (!ids.length) return;
-  try {
-    const res = await fetch(API + urlSrc('/api/lifespan/badges?ids=' + ids.join(',')));
-    const badges = await res.json();
-    for (const [id, badge] of Object.entries(badges)) {
-      const el = document.querySelector('[data-lifespan="' + id + '"]');
-      if (el && badge && badge.lifespan_days > 0) {
-        el.innerHTML = badge.icon + ' ' + badge.text;
-        el.style.background = badge.color;
-        el.style.display = 'inline-flex';
-      }
-    }
-  } catch(e) {}
-}
 
 async function loadStats() {
   try {
@@ -661,14 +786,90 @@ function openModal(id) {
   if (item.offer_name) badges += `<span class="badge" style="background:#dcfce7;color:#166534;cursor:pointer" onclick="filterByOffer('${esc(item.offer_name)}', event)">💼 ${esc(item.offer_name)}</span>`;
   $('modal-badges').innerHTML = badges;
 
-  // Load lifespan for modal
-  loadLifespanModal(id);
+  // Load prokly snapshot for this item
+  loadProklyForItem(id);
 
   // Load similar
   loadSimilar(id);
 
   $('modal-overlay').classList.add('open');
   document.body.style.overflow = 'hidden';
+}
+
+async function loadProklyForItem(itemId) {
+  const sec = $('item-prokly-section');
+  const host = $('item-prokly-host');
+  const actions = $('item-prokly-actions');
+  if (!sec || !host) return;
+  sec.style.display = 'none';
+  host.innerHTML = '';
+  if (actions) actions.innerHTML = '';
+  if (!itemId) return;
+  try {
+    const res = await fetch(API + '/api/prokly/snapshots?item_id=' + itemId + '&per_page=1&page=1');
+    const data = await res.json();
+    sec.style.display = 'block';
+    if (!data.items || !data.items.length) {
+      host.innerHTML = `
+        <div class="ipc-empty">
+          <span>Снимка ленда нет — клоакер ещё не проверен</span>
+          <button onclick="proklyEnqueueForCard(${itemId})">📸 Снять сейчас</button>
+        </div>`;
+      return;
+    }
+    const s = data.items[0];
+    // Кэшируем для proklyOpenSnap (он читает _proklySnaps)
+    if (typeof _proklySnaps !== 'undefined' && !_proklySnaps.find(x => x.id === s.id)) {
+      _proklySnaps.push(s);
+    }
+    const f = s.geo ? flag(s.geo) : '';
+    const ssUrl = s.screenshot_path ? mediaUrl('/api/prokly/file/' + s.id + '/thumb') : '';
+    const fetched = s.fetched_at ? new Date(s.fetched_at + 'Z').toLocaleString() : '—';
+    const dur = s.duration_ms ? (s.duration_ms / 1000).toFixed(1) + 's' : '';
+    const okBad = s.status === 'ok' ? 'ok' : 'bad';
+    host.innerHTML = `
+      <div class="ipc-card" onclick="openProklyFromCard(${s.id})">
+        <div class="ipc-thumb">
+          ${ssUrl ? `<img src="${ssUrl}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'">` : '<div class="ipc-empty-thumb">no screenshot</div>'}
+          ${f ? `<span class="ipc-flag">${f}</span>` : ''}
+          <span class="ipc-status ${okBad}">${esc(s.status || '?')}</span>
+        </div>
+        <div class="ipc-info">
+          <div class="ipc-title">${esc(s.page_title || '(no title)')}</div>
+          <div class="ipc-meta">📅 ${fetched}${dur ? ' · ⏱ ' + dur : ''}</div>
+        </div>
+      </div>
+    `;
+    if (actions) {
+      actions.innerHTML = `<button onclick="proklyEnqueueForCard(${itemId})" title="Снять заново">🔄 Снять заново</button>`;
+    }
+  } catch(e) {
+    console.error('loadProklyForItem:', e);
+    sec.style.display = 'none';
+  }
+}
+
+async function proklyEnqueueForCard(itemId) {
+  try {
+    const res = await fetch(API + '/api/prokly/snapshot/' + itemId, { method: 'POST' });
+    const d = await res.json();
+    if (d.queued) {
+      const host = $('item-prokly-host');
+      if (host) host.innerHTML = `<div class="ipc-empty"><span>📸 Снимок в очереди (job #${d.job_id}). Обновится через ~10-30 сек.</span></div>`;
+      // Polling for completion
+      setTimeout(() => loadProklyForItem(itemId), 12000);
+    } else if (d.reason) {
+      alert('Уже в очереди: ' + d.reason);
+    } else if (d.error) {
+      alert('Error: ' + d.error);
+    }
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+function openProklyFromCard(snapId) {
+  // Закрываем основную модалку → открываем прокли-модалку
+  closeModal();
+  setTimeout(() => proklyOpenSnap(snapId), 100);
 }
 
 async function loadSimilar(id) {
@@ -871,9 +1072,22 @@ function filterByDomain(domain, event) {
 }
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Escape') {
+    const pm = $('prokly-modal-overlay');
+    if (pm && pm.classList.contains('open')) {
+      proklyCloseModal();
+      return;
+    }
+    closeModal();
+  }
   if (e.key === 'ArrowLeft' && $('modal-overlay').classList.contains('open')) navModal(-1);
   if (e.key === 'ArrowRight' && $('modal-overlay').classList.contains('open')) navModal(1);
+  // Стрелки в прокли-модалке
+  const pm = $('prokly-modal-overlay');
+  if (pm && pm.classList.contains('open')) {
+    if (e.key === 'ArrowLeft') navProklyModal(-1);
+    if (e.key === 'ArrowRight') navProklyModal(1);
+  }
 });
 
 function navModal(dir) {
@@ -889,25 +1103,6 @@ function navModal(dir) {
 function startAutoRefresh() {
   if (autoRefreshTimer) clearInterval(autoRefreshTimer);
   autoRefreshTimer = setInterval(() => { if (currentPage===1) { loadItems(); loadStats(); } }, 30000);
-}
-
-// === LIFESPAN MODAL ===
-async function loadLifespanModal(id) {
-  const el = $('modal-lifespan');
-  el.style.display = 'none';
-  try {
-    const res = await fetch(API + urlSrc('/api/lifespan/' + id));
-    const data = await res.json();
-    if (!data || !data.lifespan_days) return;
-    const b = data.badge || {};
-    el.innerHTML = `
-      <span class="lifespan-badge" style="background:${b.color || '#6b7280'};display:inline-flex">${b.icon || ''} ${b.text || ''}</span>
-      <span style="margin-left:8px">${data.days_active || 0} active days &middot; ${data.n_domains || 0} domains &middot; ${data.n_buyers || 0} buyers &middot; ${data.n_sightings || 0} sightings</span>
-      ${data.status ? ` &middot; <b>${data.status}</b>` : ''}
-      ${data.also_running_in ? ` &middot; Also in: ${data.also_running_in.map(g => flag(g) + g).join(', ')}` : ''}
-    `;
-    el.style.display = 'block';
-  } catch(e) {}
 }
 
 // === FAVORITES ===
@@ -955,6 +1150,66 @@ function toggleFavModal() {
   if (_modalItemId) toggleFav(_modalItemId);
 }
 
+// === Admin delete ===
+async function deleteCard(itemId, event) {
+  if (event) { event.stopPropagation(); event.preventDefault(); }
+  if (!isAdmin()) return;
+  if (!confirm('Удалить карточку #' + itemId + '?\nЭто действие необратимо.')) return;
+  try {
+    const res = await fetch(API + '/api/items/' + itemId, { method: 'DELETE' });
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({}));
+      alert('Ошибка удаления: ' + (e.error || res.status));
+      return;
+    }
+    // Удаляем из памяти + DOM
+    allItems = allItems.filter(i => i.id !== itemId);
+    _favSet.delete(itemId);
+    document.querySelectorAll('.card').forEach(c => {
+      const cid = parseInt(c.getAttribute('onclick')?.match(/\d+/)?.[0]);
+      if (cid === itemId) c.remove();
+    });
+    $('fav-count').textContent = _favSet.size ? '(' + _favSet.size + ')' : '';
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function deleteFromModal() {
+  if (!isAdmin() || !_modalItemId) return;
+  const id = _modalItemId;
+  if (!confirm('Удалить карточку #' + id + '?\nЭто действие необратимо.')) return;
+  try {
+    const res = await fetch(API + '/api/items/' + id, { method: 'DELETE' });
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({}));
+      alert('Ошибка удаления: ' + (e.error || res.status));
+      return;
+    }
+    allItems = allItems.filter(i => i.id !== id);
+    _favSet.delete(id);
+    document.querySelectorAll('.card').forEach(c => {
+      const cid = parseInt(c.getAttribute('onclick')?.match(/\d+/)?.[0]);
+      if (cid === id) c.remove();
+    });
+    $('fav-count').textContent = _favSet.size ? '(' + _favSet.size + ')' : '';
+    closeModal();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function proklyDeleteSnap(snapId, event) {
+  if (event) { event.stopPropagation(); event.preventDefault(); }
+  if (!isAdmin()) return;
+  if (!confirm('Удалить снимок #' + snapId + '?\nЭто действие необратимо.')) return;
+  try {
+    const res = await fetch(API + '/api/prokly/snapshots/' + snapId, { method: 'DELETE' });
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({}));
+      alert('Ошибка удаления: ' + (e.error || res.status));
+      return;
+    }
+    if (typeof proklyLoadSnapshots === 'function') proklyLoadSnapshots();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
 function updateModalFavBtn() {
   const btn = $('modal-fav');
   if (btn && _modalItemId) {
@@ -968,10 +1223,424 @@ function switchTab(tab) {
   _currentTab = tab;
   $('tab-all').classList.toggle('active', tab === 'all');
   $('tab-favorites').classList.toggle('active', tab === 'favorites');
-  // Show/hide filters for favorites tab
-  document.querySelector('.filters').style.display = tab === 'favorites' ? 'none' : 'flex';
+  $('tab-prokly').classList.toggle('active', tab === 'prokly');
+  // Show/hide filters
+  document.querySelector('.filters').style.display = (tab === 'all') ? 'flex' : 'none';
+  // Show/hide grid + prokly container
+  $('grid').style.display = (tab === 'prokly') ? 'none' : 'grid';
+  $('prokly-container').style.display = (tab === 'prokly') ? 'block' : 'none';
+  $('pagination-top').style.display = (tab === 'all') ? 'flex' : 'none';
+  $('pagination-bottom').style.display = (tab === 'all') ? 'flex' : 'none';
+  // Active filters chip — только в All
+  const af = $('active-filters'); if (af) af.style.display = (tab === 'all' && af.classList.contains('show')) ? 'flex' : 'none';
+  // Insights bar — только в All
+  const ins = document.querySelector('.insights-bar'); if (ins) ins.style.display = (tab === 'all') ? 'flex' : 'none';
+
   if (tab === 'favorites') loadFavorites();
+  else if (tab === 'prokly') proklyOpen();
   else { currentPage = 1; loadItems(); }
+}
+
+// =======================================================================
+// PROKLY — снимки лендов через гео-прокси
+// =======================================================================
+let _proklySubTab = 'gallery';
+let _proklyPage = 1;
+
+function proklyOpen() {
+  proklySwitch(_proklySubTab);
+  proklyLoadStats();
+  proklyLoadProxies();
+  if (_proklySubTab === 'gallery') proklyLoadSnapshots();
+}
+
+function proklySwitch(sub) {
+  _proklySubTab = sub;
+  $('prokly-tab-gallery').classList.toggle('active', sub === 'gallery');
+  $('prokly-tab-settings').classList.toggle('active', sub === 'settings');
+  $('prokly-pane-gallery').style.display = sub === 'gallery' ? 'block' : 'none';
+  $('prokly-pane-settings').style.display = sub === 'settings' ? 'block' : 'none';
+  if (sub === 'gallery') proklyLoadSnapshots();
+  if (sub === 'settings') proklyLoadProxies();
+}
+
+async function proklyLoadStats() {
+  try {
+    const res = await fetch(API + '/api/prokly/stats');
+    const d = await res.json();
+    const q = d.queue || {};
+    $('prokly-q-pending').textContent = q.pending || 0;
+    $('prokly-q-prog').textContent = q.in_progress || 0;
+    $('prokly-q-done').textContent = q.done || 0;
+    $('prokly-q-fail').textContent = q.failed || 0;
+    $('prokly-snap-total').textContent = d.snapshots_total || 0;
+    $('prokly-count').textContent = '(' + (d.snapshots_total || 0) + ')';
+    $('prokly-auto').checked = d.auto === 'on';
+  } catch(e) { console.error('prokly stats:', e); }
+}
+
+async function proklyToggleAuto(on) {
+  try {
+    await fetch(API + '/api/prokly/auto', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({auto: on}),
+    });
+  } catch(e) { console.error(e); }
+}
+
+async function proklyLoadProxies() {
+  try {
+    const res = await fetch(API + '/api/prokly/proxies');
+    const data = await res.json();
+    $('prx-list').innerHTML = data.map(p => {
+      const cls = p.test_status === 'ok' ? 'status-ok'
+                 : p.test_status === 'untested' ? 'status-untested'
+                 : 'status-bad';
+      const masked = (p.proxy_url || '').replace(/:([^:@]+)@/, ':****@');
+      const last = p.last_tested_at ? new Date(p.last_tested_at + 'Z').toLocaleString() : '—';
+      const ua = p.user_agent || '<i style="opacity:0.6">default</i>';
+      const uaShort = ua.length > 60 ? esc(ua.slice(0, 60)) + '…' : (p.user_agent ? esc(ua) : ua);
+      const dev = `
+        <div style="font-size:10px;line-height:1.4">
+          <div title="${esc(ua)}" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${uaShort}</div>
+          <div style="color:var(--text-dim)">📍 ${esc(p.locale || 'default')} · 🕒 ${esc(p.timezone || 'default')}</div>
+        </div>`;
+      return `<tr>
+        <td><strong>${esc(p.geo)}</strong></td>
+        <td style="font-family:monospace;font-size:11px">${esc(masked)}</td>
+        <td>${esc(p.label || '')}</td>
+        <td>${dev}</td>
+        <td class="${cls}">${esc(p.test_status || 'untested')}</td>
+        <td>${esc(p.detected_country || '—')}</td>
+        <td style="font-size:11px">${last}</td>
+        <td>
+          <button class="btn-mini" onclick="proklyEdit('${esc(p.geo)}')">Edit</button>
+          <button class="btn-mini" onclick="proklyTest('${esc(p.geo)}')">Test</button>
+          <button class="btn-mini danger" onclick="proklyDelete('${esc(p.geo)}')">Delete</button>
+        </td>
+      </tr>`;
+    }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text-dim);padding:24px">No proxies yet</td></tr>';
+    // Cache for Edit
+    window._proklyProxies = data;
+  } catch(e) { console.error(e); }
+}
+
+function proklyEdit(geo) {
+  const p = (window._proklyProxies || []).find(x => x.geo === geo);
+  if (!p) return;
+  $('prx-geo').value = p.geo || '';
+  $('prx-url').value = p.proxy_url || '';
+  $('prx-label').value = p.label || '';
+  $('prx-ua').value = p.user_agent || '';
+  $('prx-locale').value = p.locale || '';
+  $('prx-tz').value = p.timezone || '';
+  $('prx-geo').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+async function proklySaveProxy() {
+  const geo = $('prx-geo').value.trim().toUpperCase();
+  const url = $('prx-url').value.trim();
+  const label = $('prx-label').value.trim();
+  const user_agent = $('prx-ua').value.trim();
+  const locale = $('prx-locale').value.trim();
+  const timezone = $('prx-tz').value.trim();
+  $('prx-error').style.display = 'none';
+  if (!geo || !url) {
+    $('prx-error').textContent = 'Geo and proxy URL are required';
+    $('prx-error').style.display = 'block';
+    return;
+  }
+  try {
+    const res = await fetch(API + '/api/prokly/proxies', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({geo, proxy_url: url, label, user_agent, locale, timezone}),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      $('prx-error').textContent = err.error || 'Failed to save';
+      $('prx-error').style.display = 'block';
+      return;
+    }
+    $('prx-geo').value = ''; $('prx-url').value = ''; $('prx-label').value = '';
+    $('prx-ua').value = ''; $('prx-locale').value = ''; $('prx-tz').value = '';
+    proklyLoadProxies();
+  } catch(e) { console.error(e); }
+}
+
+async function proklyTest(geo) {
+  try {
+    const res = await fetch(API + '/api/prokly/proxies/' + encodeURIComponent(geo) + '/test', { method: 'POST' });
+    const d = await res.json();
+    if (d.ok) alert('OK: detected ' + d.detected);
+    else alert('Failed: ' + (d.error || 'unknown'));
+    proklyLoadProxies();
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function proklyDelete(geo) {
+  if (!confirm('Delete proxy for ' + geo + '?')) return;
+  try {
+    await fetch(API + '/api/prokly/proxies/' + encodeURIComponent(geo), { method: 'DELETE' });
+    proklyLoadProxies();
+  } catch(e) { console.error(e); }
+}
+
+let _proklySnaps = [];
+async function proklyLoadSnapshots() {
+  try {
+    const res = await fetch(API + '/api/prokly/snapshots?per_page=30&page=' + _proklyPage);
+    const data = await res.json();
+    _proklySnaps = data.items || [];
+    if (!data.items.length) {
+      $('prokly-grid').innerHTML = '<div class="empty">Нет снимков. Включи Auto или нажми «Снять проклы» в модалке карточки.</div>';
+      $('prokly-pagination').innerHTML = '';
+      return;
+    }
+    $('prokly-grid').innerHTML = data.items.map(s => {
+      const f = s.geo ? flag(s.geo) : '';
+      const ssUrl = s.screenshot_path
+        ? mediaUrl('/api/prokly/file/' + s.id + '/thumb')
+        : '';
+      const fetched = s.fetched_at ? new Date(s.fetched_at + 'Z').toLocaleString() : '';
+      const statusBadge = s.status === 'ok' ? ''
+        : `<span class="ss-status">${esc(s.status)}</span>`;
+      return `
+        <div class="prokly-card" onclick="proklyOpenSnap(${s.id})">
+          <div class="ss-wrap">
+            ${ssUrl ? `<img src="${ssUrl}" loading="lazy" decoding="async" alt="" onerror="this.remove()">` : ''}
+            ${f ? `<span class="ss-geo">${f}</span>` : ''}
+            ${statusBadge}
+            ${isAdmin() ? `<button class="ss-del-btn" onclick="proklyDeleteSnap(${s.id},event)" title="Удалить снимок">\u{1F5D1}</button>` : ''}
+          </div>
+          <div class="ss-body">
+            <div class="title">${esc(s.page_title || '(no title)')}</div>
+            <div class="url">${esc(s.url || '').slice(0, 80)}</div>
+            <div class="date">${fetched}</div>
+          </div>
+        </div>`;
+    }).join('');
+    // Pagination
+    if (data.pages > 1) {
+      $('prokly-pagination').innerHTML = `
+        <button ${data.page<=1?'disabled':''} onclick="proklyGo(${data.page-1})">Prev</button>
+        <span class="page-info">${data.page} / ${data.pages}</span>
+        <button ${data.page>=data.pages?'disabled':''} onclick="proklyGo(${data.page+1})">Next</button>`;
+    } else $('prokly-pagination').innerHTML = '';
+    proklyLoadStats();
+  } catch(e) { console.error(e); }
+}
+
+function proklyGo(p) { _proklyPage = p; proklyLoadSnapshots(); }
+
+let _proklyModalId = null;
+
+function navProklyModal(dir) {
+  if (_proklyModalId == null || !_proklySnaps.length) return;
+  const idx = _proklySnaps.findIndex(s => s.id === _proklyModalId);
+  if (idx === -1) return;
+  const next = idx + dir;
+  if (next < 0 || next >= _proklySnaps.length) return;
+  proklyOpenSnap(_proklySnaps[next].id);
+}
+
+function proklyOpenSnap(id) {
+  const s = _proklySnaps.find(x => x.id === id);
+  if (!s) return;
+  _proklyModalId = id;
+  const f = s.geo ? flag(s.geo) : '';
+  $('pm-geo').textContent = f + (s.geo ? ' ' + s.geo : '');
+  $('pm-title').textContent = s.page_title || '(no title)';
+  const stEl = $('pm-status');
+  stEl.textContent = s.status || '—';
+  stEl.classList.remove('ok', 'bad');
+  if (s.status === 'ok') stEl.classList.add('ok');
+  else if (s.status) stEl.classList.add('bad');
+
+  // Setup HTML iframe + screenshot. Hide tabs if only one of them available.
+  const hasHtml = !!s.html_path;
+  const hasShot = !!s.screenshot_path;
+  const tabsEl = $('pm-view-tabs');
+  if (hasHtml && hasShot) tabsEl.style.display = 'flex';
+  else tabsEl.style.display = 'none';
+
+  const iframeEl = $('pm-iframe');
+  if (hasHtml) {
+    iframeEl.src = mediaUrl('/api/prokly/file/' + s.id + '/html');
+  } else {
+    iframeEl.removeAttribute('src');
+  }
+
+  const shotInner = $('pm-shot-inner');
+  if (hasShot) {
+    const ssUrl = mediaUrl('/api/prokly/file/' + s.id + '/screenshot');
+    shotInner.innerHTML = `<img src="${ssUrl}" alt="">`;
+  } else {
+    shotInner.innerHTML = `<div class="empty-shot">📼 Скриншот недоступен (status: ${esc(s.status || 'unknown')})</div>`;
+  }
+
+  // Default view: screenshot if available, else HTML
+  if (hasShot) proklySetView('screenshot');
+  else proklySetView('html');
+
+  // Linked creative card
+  const sec = $('pm-creative-section');
+  const host = $('pm-creative-card-host');
+  if (s.item_id) {
+    sec.style.display = 'block';
+    host.innerHTML = '<div class="pm-creative-empty">Загружается…</div>';
+    proklyLoadLinkedItem(s.item_id);
+  } else {
+    sec.style.display = 'none';
+    host.innerHTML = '';
+  }
+
+  // Meta
+  const fetched = s.fetched_at ? new Date(s.fetched_at + 'Z').toLocaleString() : '—';
+  const dur = s.duration_ms ? (s.duration_ms / 1000).toFixed(2) + 's' : '—';
+  const meta = [
+    ['Fetched', fetched],
+    ['Duration', dur],
+  ];
+  $('pm-meta').innerHTML = meta.map(([k, v]) =>
+    `<span class="lbl">${esc(k)}:</span><span class="val">${v}</span>`
+  ).join('');
+
+  // Actions
+  const actions = [];
+  if (s.url) {
+    actions.push(`<a class="pm-primary" href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">🔗 Открыть страницу</a>`);
+  }
+  if (s.screenshot_path) {
+    actions.push(`<button onclick="proklyDownload(${s.id}, 'screenshot')">⬇ Скачать скриншот</button>`);
+  }
+  if (s.archive_path) {
+    actions.push(`<button onclick="proklyDownload(${s.id}, 'archive')">⬇ Скачать архив (HTML + assets)</button>`);
+  } else if (s.html_path) {
+    actions.push(`<button onclick="proklyDownload(${s.id}, 'html')">⬇ Скачать HTML</button>`);
+  }
+  $('pm-actions').innerHTML = actions.join('');
+
+  $('prokly-modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function proklySetView(view) {
+  document.querySelectorAll('#pm-view-tabs button').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === view);
+  });
+  document.querySelectorAll('.pm-view').forEach(v => {
+    v.classList.toggle('active', v.id === 'pm-view-' + view);
+  });
+}
+
+async function proklyLoadLinkedItem(itemId) {
+  const host = $('pm-creative-card-host');
+  try {
+    const res = await fetch(API + urlSrc('/api/item/' + itemId));
+    if (!res.ok) {
+      host.innerHTML = '<div class="pm-creative-empty">Креатив #' + itemId + ' недоступен</div>';
+      return;
+    }
+    const item = await res.json();
+    if (!item) {
+      host.innerHTML = '<div class="pm-creative-empty">Креатив #' + itemId + ' не найден</div>';
+      return;
+    }
+    const f = flag(item.geo);
+    const thumb = item.thumb_filename ? mediaUrl('/api/thumbs/' + item.thumb_filename) : '';
+    const meta = [];
+    if (item.geo && item.geo !== 'XX') meta.push(`${f} ${esc(item.geo)}`);
+    meta.push(esc(formatDate(item.created_at)));
+    if (item.uid) meta.push(`<code style="opacity:0.6">${esc(item.uid)}</code>`);
+    if (item.buyer_name) meta.push(`<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:3px">${esc(item.buyer_name)}</span>`);
+
+    host.innerHTML = `
+      <div class="pm-creative-card" onclick="proklyOpenLinkedItem(${item.id})">
+        <div class="ccc-thumb">
+          ${thumb ? `<img src="${thumb}" alt="" onerror="this.remove()">` : ''}
+          ${f ? `<span class="ccc-flag">${f}</span>` : ''}
+          ${item.video_filename ? '<div class="play">▶</div>' : ''}
+        </div>
+        <div class="ccc-info">
+          <div class="ccc-meta">${meta.join(' · ')}</div>
+          ${item.tracking_domain ? `<div class="ccc-domain">${esc(item.tracking_domain)}</div>` : ''}
+          <div class="ccc-text">${esc(truncate(item.translation || '', 30))}</div>
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    host.innerHTML = '<div class="pm-creative-empty">Ошибка загрузки: ' + esc(e.message) + '</div>';
+  }
+}
+
+function proklyOpenLinkedItem(itemId) {
+  // Закрываем prokly-модалку и открываем основную
+  $('prokly-modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  switchTab('all');
+  const found = allItems.find(i => i.id === itemId);
+  const open = () => setTimeout(() => openModal(itemId), 100);
+  if (found) { open(); return; }
+  fetch(API + urlSrc('/api/item/' + itemId)).then(r => r.json()).then(item => {
+    if (item) { allItems.push(item); open(); }
+  }).catch(() => {});
+}
+
+function proklyCloseModal(e) {
+  if (e && e.target.id !== 'prokly-modal-overlay' && e.target.closest('.pm-close') == null) return;
+  $('prokly-modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  _proklyModalId = null;
+  // Сбрасываем iframe — иначе страница продолжает грузиться/жрать сеть в фоне
+  const iframeEl = $('pm-iframe');
+  if (iframeEl) iframeEl.removeAttribute('src');
+}
+
+async function proklyDownload(snapId, kind) {
+  const url = mediaUrl('/api/prokly/file/' + snapId + '/' + kind);
+  const ext = kind === 'screenshot' ? 'jpg' : kind === 'archive' ? 'zip' : 'html';
+  try {
+    const res = await fetch(url);
+    if (!res.ok) { alert('Не удалось загрузить файл'); return; }
+    const blob = await res.blob();
+    const obj = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = obj;
+    a.download = `snapshot_${snapId}.${ext}`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(obj); a.remove(); }, 1000);
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+function proklyGoToItem(itemId) {
+  proklyCloseModal({ target: { id: 'prokly-modal-overlay' } });
+  switchTab('all');
+  // Try to open main modal for this item if it's already loaded
+  const found = allItems.find(i => i.id === itemId);
+  if (found) {
+    setTimeout(() => openModal(itemId), 100);
+  } else {
+    // Search for the item directly via API and open
+    fetch(API + '/api/item/' + itemId).then(r => r.json()).then(item => {
+      if (item) {
+        allItems.push(item);
+        setTimeout(() => openModal(itemId), 100);
+      }
+    }).catch(() => {});
+  }
+}
+
+async function proklyEnqueueForItem(itemId) {
+  try {
+    const res = await fetch(API + '/api/prokly/snapshot/' + itemId, { method: 'POST' });
+    const d = await res.json();
+    if (d.queued) alert('Снимок поставлен в очередь (job #' + d.job_id + ')');
+    else if (d.reason) alert('Уже в очереди: ' + d.reason);
+    else if (d.error) alert('Error: ' + d.error);
+  } catch(e) { alert('Error: ' + e.message); }
 }
 
 async function loadFavorites() {
@@ -1011,163 +1680,15 @@ async function loadFavorites() {
   } catch(e) { console.error('Favorites error:', e); }
 }
 
-// === REELS MODE ===
-let _reelsObserver = null;
-let _reelsOpen = false;
-let _reelsMuted = true;
-let _reelsScrollHandler = null;
-
-function _filterReelable(items) {
-  // Reels only makes sense for items with video
-  return items.filter(it => it.video_filename);
-}
-
-function renderReel(item) {
-  const f = item.geo ? flag(item.geo) : '';
-  return `
-    <div class="reel-page" data-id="${item.id}">
-      <video src="${mediaUrl('/api/videos/' + esc(item.video_filename))}"
-             ${item.thumb_filename ? `poster="${mediaUrl('/api/thumbs/' + esc(item.thumb_filename))}"` : ''}
-             loop ${_reelsMuted ? 'muted' : ''} playsinline preload="metadata"
-             onclick="this.paused?this.play():this.pause()"
-             onerror="this.outerHTML='<div class=reel-no-video>📼 Видео в архиве</div>'"></video>
-      <div class="reel-overlay-info">
-        <div class="reel-text">${esc(truncate(item.translation, 60))}</div>
-        <div class="reel-badges">
-          ${item.geo && item.geo!=='XX' ? `<span class="badge">${f} ${esc(item.geo)}</span>` : ''}
-          ${item.tracking_domain ? `<span class="badge" onclick="_reelsFilterDomain('${esc(item.tracking_domain)}')">${esc(item.tracking_domain)}</span>` : ''}
-          ${item.offer_name ? `<span class="badge offer" onclick="_reelsFilterOffer('${esc(item.offer_name)}')">💼 ${esc(item.offer_name)}</span>` : ''}
-          ${item.buyer_name ? `<span class="badge buyer">${esc(item.buyer_name)}</span>` : ''}
-        </div>
-      </div>
-      <div class="reel-actions">
-        <button class="reel-action-btn ${_favSet.has(item.id)?'active':''}" data-fav="${item.id}" onclick="toggleFav(${item.id}, event); _reelsRefreshFav(${item.id});" title="Favorite">${_favSet.has(item.id)?'\u2605':'\u2606'}</button>
-        <button class="reel-action-btn" onclick="openModal(${item.id})" title="Details">i</button>
-        <button class="reel-action-btn" onclick="_reelsToggleMute()" title="Mute/Unmute">${_reelsMuted ? '🔇' : '🔊'}</button>
-      </div>
-    </div>
-  `;
-}
-
-function openReels(startId = null) {
-  const reelable = _filterReelable(allItems);
-  if (!reelable.length) {
-    alert('Нет карточек с видео для текущих фильтров');
-    return;
-  }
-
-  const stage = $('reels-stage');
-  stage.innerHTML = reelable.map(renderReel).join('');
-  $('reels-counter').textContent = '1 / ' + reelable.length;
-  $('reels-overlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
-  _reelsOpen = true;
-
-  // Прыжок на конкретный item если задан
-  if (startId !== null) {
-    const targetIdx = reelable.findIndex(i => i.id === startId);
-    if (targetIdx >= 0) {
-      const target = stage.children[targetIdx];
-      if (target) target.scrollIntoView({ behavior: 'instant', block: 'start' });
-    }
-  }
-
-  // Observer: автоплей видимого, пауза остальных + counter + lazy-load
-  if (_reelsObserver) _reelsObserver.disconnect();
-  _reelsObserver = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      const vid = entry.target.querySelector('video');
-      if (entry.intersectionRatio > 0.6) {
-        // Активная страница
-        if (vid) vid.play().catch(() => {});
-        const idx = Array.from(stage.children).indexOf(entry.target) + 1;
-        $('reels-counter').textContent = idx + ' / ' + stage.children.length;
-        // Near-bottom: догрузить
-        if (idx >= stage.children.length - 2 && currentPage < _totalPages) {
-          _reelsLoadMore();
-        }
-      } else {
-        if (vid) vid.pause();
-      }
-    });
-  }, { threshold: [0, 0.6, 1], root: stage });
-
-  Array.from(stage.children).forEach(p => _reelsObserver.observe(p));
-}
-
-function closeReels() {
-  $('reels-overlay').classList.remove('open');
-  document.body.style.overflow = '';
-  _reelsOpen = false;
-  if (_reelsObserver) { _reelsObserver.disconnect(); _reelsObserver = null; }
-  // Пауза всех видео
-  $('reels-stage').querySelectorAll('video').forEach(v => { v.pause(); v.removeAttribute('src'); v.load(); });
-  $('reels-stage').innerHTML = '';
-}
-
-function _reelsToggleMute() {
-  _reelsMuted = !_reelsMuted;
-  $('reels-stage').querySelectorAll('video').forEach(v => v.muted = _reelsMuted);
-  // Обновить кнопку
-  $('reels-stage').querySelectorAll('.reel-action-btn[onclick*="reelsToggleMute"]').forEach(b => {
-    b.textContent = _reelsMuted ? '🔇' : '🔊';
-  });
-}
-
-function _reelsRefreshFav(itemId) {
-  const btn = $('reels-stage').querySelector(`.reel-action-btn[data-fav="${itemId}"]`);
-  if (btn) {
-    btn.classList.toggle('active', _favSet.has(itemId));
-    btn.textContent = _favSet.has(itemId) ? '\u2605' : '\u2606';
-  }
-}
-
-async function _reelsLoadMore() {
-  if (_loadingMore || currentPage >= _totalPages) return;
-  const before = allItems.length;
-  currentPage++;
-  await loadItems(true);
-  if (!_reelsOpen) return;
-  // Append новые items в reels stage
-  const newItems = _filterReelable(allItems.slice(before));
-  if (!newItems.length) return;
-  const stage = $('reels-stage');
-  const html = newItems.map(renderReel).join('');
-  stage.insertAdjacentHTML('beforeend', html);
-  // observe новые страницы
-  const all = stage.children;
-  for (let i = all.length - newItems.length; i < all.length; i++) {
-    if (_reelsObserver && all[i]) _reelsObserver.observe(all[i]);
-  }
-}
-
-function _reelsFilterDomain(domain) {
-  closeReels();
-  filterByDomain(domain);
-}
-function _reelsFilterOffer(offer) {
-  closeReels();
-  filterByOffer(offer);
-}
-
-// Esc + R горячие клавиши
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && _reelsOpen) { closeReels(); return; }
-  if ((e.key === 'r' || e.key === 'R') && !_reelsOpen) {
-    const tag = (document.activeElement && document.activeElement.tagName) || '';
-    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-    openReels();
-  }
-});
-
 // === LOGIN (dual-portal) ===
 const PASSWORDS = {
-  'REDACTED_PASSWORD_1':  { sources: ['spy'],            label: 'SPY' },
-  'REDACTED_PASSWORD_2': { sources: ['spy','translator'], label: 'SPY + Translator' }
+  'ssteam':  { sources: ['spy'],            label: 'SPY',                admin: false },
+  'ssteam2': { sources: ['spy','translator'], label: 'SPY + Translator', admin: true  }
 };
 function getAuth() { return localStorage.getItem('spy_auth') || ''; }
 function getAuthCfg() { return PASSWORDS[getAuth()] || null; }
 function isMultiPortal() { const c = getAuthCfg(); return c && c.sources.length > 1; }
+function isAdmin() { const c = getAuthCfg(); return !!(c && c.admin); }
 
 // Все fetch'и должны добавлять auth — через query param (Cloudflare Worker
 // проксирует URL целиком, но фильтрует кастомные headers).
@@ -1215,16 +1736,20 @@ function logout() {
 // UI-видимость переключателя источника
 function applyPortalUI() {
   const tog = $('source-toggle');
-  if (!tog) return;
-  if (isMultiPortal()) {
-    tog.style.display = 'flex';
-    const cur = getCurrentSource();
-    tog.querySelectorAll('.src-btn').forEach(b => {
-      b.classList.toggle('active', b.dataset.src === cur);
-    });
-  } else {
-    tog.style.display = 'none';
+  if (tog) {
+    if (isMultiPortal()) {
+      tog.style.display = 'flex';
+      const cur = getCurrentSource();
+      tog.querySelectorAll('.src-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.src === cur);
+      });
+    } else {
+      tog.style.display = 'none';
+    }
   }
+  // Admin-only кнопки
+  const modalDel = document.getElementById('modal-del');
+  if (modalDel) modalDel.style.display = isAdmin() ? '' : 'none';
 }
 function setSource(src) {
   localStorage.setItem('spy_source', src);
